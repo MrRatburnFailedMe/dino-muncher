@@ -467,6 +467,8 @@ const CITY2={x0:-472,x1:-238,z0:-214,z1:178};
 const BASE={x0:252,x1:600,z0:262,z1:610};
 // a big suburb east of downtown, and a nuclear power plant up in the northern hills
 const SUB={x0:640,x1:985,z0:-208,z1:420},PLANT={x0:360,x1:590,z0:-590,z1:-400};
+// a castle on a flat-topped mountain in the far north-west corner, up above the old city
+const CASTLE={x:-655,z:-462,r:80,y:96};
 const ROUTES=[
   [[310,-244],[300,-280],[150,-300],[0,-305],[-150,-300],[-290,-272],[-322,-214]],
   [[450,-244],[460,-320],[470,-400]],
@@ -824,6 +826,8 @@ const SPECIES=[
   {id:'bronto',dino:true,temper:'fight',name:'Brontosaurus',size:12.5,count:5,speed:2.2,color:'#8f9fdc',build:buildBronto},
   {id:'king',dino:true,name:'Dino King',model:'Trex',tint:{body:'#4a2f7a',belly:'#d9b84a'},size:18,count:1,speed:3.0,aggro:34,chase:15,dmg:48,color:'#5a3a8f',build:()=>buildRex(KING_LOOK)},
 ];
+// a baby dino walks at 10% of mod-menu infinite speed, a World Eater at 70%
+const dinoSpeed=()=>14+84*clamp(Math.log(Math.max(1,P.size))/Math.log(70),0,1);
 const STAGES=[{s:1,name:'Baby Rex'},{s:1.6,name:'Little Rex'},{s:2.7,name:'Teen Rex'},{s:4.4,name:'Big Rex'},{s:7.2,name:'Mega Rex'},{s:11.5,name:'Tyrant Rex'},{s:18,name:'Dino Legend'},{s:26,name:'City Crusher'},{s:40,name:'Kaiju'},{s:70,name:'World Eater'}];
 
 /* ================= terrain ================= */
@@ -851,6 +855,7 @@ function beachH(x,z){const d=x-shoreX(z); return d<0?SEA_Y+1.0-d*0.045:Math.max(
 function islandH(x,z){const d=Math.hypot(x-ISL.x,z-ISL.z),r=ISL.r; return d<r*0.62?FLAT_Y:d<r?lerp(FLAT_Y,SEA_Y+0.6,sstep((d-r*0.62)/(r*0.38))):SEA_Y+0.6-(d-r)*0.22;}
 function baseH(x,z){
   let h=natH(x,z);
+  {const cd=Math.hypot(x-CASTLE.x,z-CASTLE.z); if(cd<CASTLE.r) h=CASTLE.y; else if(cd<CASTLE.r+210) h=lerp(h,CASTLE.y-(cd-CASTLE.r)*0.14,sstep(1-(cd-CASTLE.r)/210));}
   for(const L of LAKES){const ld=Math.hypot(x-L.x,z-L.z); if(ld<L.r*1.08) h=Math.min(h,lerp(h,L.bottom,sstep((1-ld/(L.r*1.08))*1.8))); else if(ld<L.r*1.5) h=Math.max(h,L.wy+0.5);}
   const e=landOut(x,z),ot=oceanT(x,z);
   if(e>0) h+=Math.min(95,Math.pow(e/16,2)*4+e*0.2);
@@ -860,7 +865,7 @@ function baseH(x,z){
   return h;
 }
 const HG=new Float32Array(GW*GH);
-for(let iz=0;iz<GH;iz++) for(let ix=0;ix<GW;ix++){const x=OX+ix*CS,z=OZ+iz*CS; HG[iz*GW+ix]=baseH(x,z)+(hash2(ix,iz)-0.5)*0.9*(1-flatT(x,z))*(Math.hypot(x-ISL.x,z-ISL.z)<ISL.r*0.95?0:1);}
+for(let iz=0;iz<GH;iz++) for(let ix=0;ix<GW;ix++){const x=OX+ix*CS,z=OZ+iz*CS; HG[iz*GW+ix]=baseH(x,z)+(hash2(ix,iz)-0.5)*0.9*(1-flatT(x,z))*(Math.hypot(x-ISL.x,z-ISL.z)<ISL.r*0.95||Math.hypot(x-CASTLE.x,z-CASTLE.z)<CASTLE.r+4?0:1);}
 // elevated highways on pillars tying the cities, the suburbs, the power plant and the base together;
 // they ramp down to street level at each end, and only the ramps press into the ground
 const RW=8,ELEV=13,roadRoutes=[],roadGrid=new Map();
@@ -869,25 +874,36 @@ const RW=8,ELEV=13,roadRoutes=[],roadGrid=new Map();
   // round off the bends (Chaikin) so the highway curves instead of kinking
   const chaikin=p=>{const o=[p[0]]; for(let i=0;i<p.length-1;i++){const [ax,az]=p[i],[bx,bz]=p[i+1]; if(i>0) o.push([ax*0.75+bx*0.25,az*0.75+bz*0.25]); if(i<p.length-2) o.push([ax*0.25+bx*0.75,az*0.25+bz*0.75]);} o.push(p[p.length-1]); return o;};
   for(const raw of ROUTES){
-    let pts=raw; for(let k=0;k<3;k++) pts=chaikin(pts);
-    const P2=[]; for(let i=0;i<pts.length-1;i++){const [ax,az]=pts[i],[bx,bz]=pts[i+1],n=Math.max(1,Math.round(Math.hypot(bx-ax,bz-az)/6)); for(let k=0;k<n;k++) P2.push([lerp(ax,bx,k/n),lerp(az,bz,k/n)]);} P2.push(pts[pts.length-1]);
-    const n=P2.length,g=P2.map(([x,z])=>baseH(x,z));
-    // the deck clears the highest ground nearby, then eases down to the street over ~100 m at each end
+    let pts=raw; for(let k=0;k<5;k++) pts=chaikin(pts);
+    // evenly spaced points every ~6 m along the curve
+    const cum=[0]; for(let i=1;i<pts.length;i++) cum.push(cum[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
+    const tot=cum[cum.length-1],NS=Math.max(2,Math.round(tot/6)),ds=tot/NS,P2=[]; let j=0;
+    for(let k=0;k<=NS;k++){const sd=tot*k/NS; while(j<pts.length-2&&cum[j+1]<sd) j++; const f=clamp((sd-cum[j])/((cum[j+1]-cum[j])||1),0,1); P2.push([lerp(pts[j][0],pts[j+1][0],f),lerp(pts[j][1],pts[j+1][1],f)]);}
+    const n=P2.length,g=P2.map(([x,z])=>baseH(x,z)),GR=0.075;
+    // the deck clears the highest ground nearby
     let m=g.map((_,i)=>{let mx=-1e9; for(let j=-6;j<=6;j++) mx=Math.max(mx,g[clamp(i+j,0,n-1)]); return mx;});
     for(let pass=0;pass<3;pass++) m=m.map((_,i)=>{let s=0; for(let j=-8;j<=8;j++) s+=m[clamp(i+j,0,n-1)]; return s/17;});
-    const route=P2.map(([x,z],i)=>{const e=sstep(Math.min(i,n-1-i)/17); return {x,z,g:g[i],e,h:Math.max(lerp(g[i],m[i],e)+ELEV*e,g[i]+0.05)};});
+    const T=m.map((v,i)=>Math.max(v+ELEV,g[i]+ELEV*0.75));
+    // never steeper than GR anywhere: the lowest gentle profile over T, pinned to the street at both ends
+    let h=T.map((_,i)=>{let mx=-1e9; for(let j=0;j<n;j++) mx=Math.max(mx,T[j]-GR*ds*Math.abs(i-j)); return mx;});
+    h=h.map((v,i)=>Math.min(v,g[0]+0.05+GR*ds*i,g[n-1]+0.05+GR*ds*(n-1-i)));
+    // round off where the grade changes so cars glide over instead of bumping
+    for(let pass=0;pass<6;pass++) h=h.map((v,i)=>i===0||i===n-1?v:(h[i-1]+v*2+h[i+1])/4);
+    const route=P2.map(([x,z],i)=>({x,z,g:g[i],h:h[i],e:clamp((h[i]-g[i])/ELEV,0,1)}));
+    // the sideways direction at each point, shared by the spans on either side so the deck has no seams
+    route.forEach((p,i)=>{const a=route[Math.max(0,i-1)],b=route[Math.min(n-1,i+1)],l=Math.hypot(b.x-a.x,b.z-a.z)||1; p.nx=(b.z-a.z)/l; p.nz=-(b.x-a.x)/l;});
     roadRoutes.push(route); route.segs=[];
     for(let i=0;i<route.length-1;i++){
       const a=route[i],b=route[i+1],M=RW+14;
       const seg={ax:a.x,az:a.z,bx:b.x,bz:b.z,ha:a.h,hb:b.h,piece:null}; route.segs.push(seg);
       for(let gx=Math.floor((Math.min(a.x,b.x)-M)/30);gx<=Math.floor((Math.max(a.x,b.x)+M)/30);gx++) for(let gz=Math.floor((Math.min(a.z,b.z)-M)/30);gz<=Math.floor((Math.max(a.z,b.z)+M)/30);gz++){const k=gx*4096+gz; if(!roadGrid.has(k)) roadGrid.set(k,[]); roadGrid.get(k).push(seg);}
-      if(a.e>0.35&&b.e>0.35) continue;
+      if(a.h-a.g>5&&b.h-b.g>5) continue;
       const ix0=Math.max(0,Math.floor((Math.min(a.x,b.x)-M-OX)/CS)),ix1=Math.min(GW-1,Math.ceil((Math.max(a.x,b.x)+M-OX)/CS)),iz0=Math.max(0,Math.floor((Math.min(a.z,b.z)-M-OZ)/CS)),iz1=Math.min(GH-1,Math.ceil((Math.max(a.z,b.z)+M-OZ)/CS));
       const vx=b.x-a.x,vz=b.z-a.z,L2=vx*vx+vz*vz||1;
       for(let iz=iz0;iz<=iz1;iz++) for(let ix=ix0;ix<=ix1;ix++){
         const x=OX+ix*CS,z=OZ+iz*CS,t=clamp(((x-a.x)*vx+(z-a.z)*vz)/L2,0,1),d=Math.hypot(x-(a.x+vx*t),z-(a.z+vz*t));
         const w=d<=RW+1.5?1:sstep(1-(d-RW-1.5)/12),k=iz*GW+ix;
-        if(w>wRaw[k]){wRaw[k]=w; hRaw[k]=Math.min(lerp(a.h,b.h,t)-0.15,HG[k]);}
+        if(w>wRaw[k]){wRaw[k]=w; hRaw[k]=lerp(a.h,b.h,t)-0.15;}
       }
     }
   }
@@ -900,12 +916,13 @@ function nearRoad(x,z,pad=0){
 }
 // the highway deck height under (x,z) if you're standing on it (or just stepping up from the ramp), else -1e9
 function deckTop(x,z,feet){
-  const l=roadGrid.get(Math.floor(x/30)*4096+Math.floor(z/30)); if(!l) return -1e9; let top=-1e9;
+  const l=roadGrid.get(Math.floor(x/30)*4096+Math.floor(z/30)); if(!l) return -1e9; let top=-1e9,bd=1e9;
+  // the span whose centre line is closest wins, so the inside of a bend never snaps to the next span over
   for(const s of l){
     if(s.piece&&!s.piece.alive) continue;
-    const vx=s.bx-s.ax,vz=s.bz-s.az,t=clamp(((x-s.ax)*vx+(z-s.az)*vz)/((vx*vx+vz*vz)||1),0,1);
-    if(Math.hypot(x-(s.ax+vx*t),z-(s.az+vz*t))>RW+0.9) continue;
-    const h=lerp(s.ha,s.hb,t); if(feet>=h-1.8&&h>top) top=h;
+    const vx=s.bx-s.ax,vz=s.bz-s.az,t=clamp(((x-s.ax)*vx+(z-s.az)*vz)/((vx*vx+vz*vz)||1),0,1),d=Math.hypot(x-(s.ax+vx*t),z-(s.az+vz*t));
+    if(d>RW+0.9) continue;
+    const h=lerp(s.ha,s.hb,t); if(feet>=h-1.8&&d<bd-0.01){bd=d; top=h;}
   }
   return top;
 }
@@ -1324,7 +1341,7 @@ let grassMesh;
   const d=new THREE.Object3D(); let n=0;
   for(let t=0;t<N*2&&n<N;t++){
     const Z=n<88000?JUNG:ZONES[1+Math.floor(rand()*5)],x=R(Z.x0,Z.x1+(Z===JUNG?40:0)),z=R(Z.z0,Z.z1);
-    if(inLake(x,z,1)||cityAt(x,z,6)||inRect(x,z,BASE,6)||x>shoreX(z)-60||nearRoad(x,z,2)||inRect(x,z,SUB,4)||inRect(x,z,PLANT,4)) continue;
+    if(inLake(x,z,1)||cityAt(x,z,6)||inRect(x,z,BASE,6)||x>shoreX(z)-60||nearRoad(x,z,2)||inRect(x,z,SUB,4)||inRect(x,z,PLANT,4)||Math.hypot(x-CASTLE.x,z-CASTLE.z)<CASTLE.r) continue;
     const s=R(0.45,0.95);
     d.position.set(x,groundH(x,z)-0.05,z); d.rotation.set(0,R(0,TAU),0); d.scale.set(s*R(0.9,1.4),s*R(0.6,1.25),s);
     d.updateMatrix(); grassMesh.setMatrixAt(n++,d.matrix);
@@ -1574,14 +1591,21 @@ const turrets=[];
   P2(410,402).push(Q(G.box,'#3d4044',410,CY+0.06,404,300,0.2,26,0,0,0,0.02));
   for(let x=275;x<550;x+=14) B(x,404,decals).push(Q(G.box,'#f2f2f2',x,CY+0.2,404,7,0.06,0.6,0,0,0,0));
   for(const z of [392.5,415.5]) B(410,z,decals).push(Q(G.box,'#f2f2f2',410,CY+0.2,z,296,0.06,0.4,0,0,0,0));
+  // chain-link fence in 12 m panels: solid to walk into, but a dino or the police can tear a panel down
   const fence=(x0,z0,x1,z1,gap)=>{
-    const len=Math.hypot(x1-x0,z1-z0),n=Math.floor(len/6),ang=Math.atan2(x1-x0,z1-z0);
-    for(let k=0;k<=n;k++){const t=k/n,x=lerp(x0,x1,t),z=lerp(z0,z1,t); if(gap&&Math.abs(x-gap)<9) continue; P2(x,z).push(Q(G.cyl6,'#7d8288',x,CY+1.8,z,0.2,3.6,0.2));}
-    const segs=gap?[[x0,gap-9],[gap+9,x1]]:[[0,0]];
-    for(const [a,bq] of segs){
-      const mx=gap?(a+bq)/2:(x0+x1)/2,mz=(z0+z1)/2,l=gap?bq-a:len;
-      for(const yy of [0.9,1.9,2.9]) P2(mx,mz).push(Q(G.box,'#9aa0a6',mx,CY+yy,mz,0.06,0.06,l,0,ang,0,0));
-      P2(mx,mz).push(Q(G.box,'#5a5f66',mx,CY+3.6,mz,0.5,0.08,l,0,ang,0.6,0));
+    const len=Math.hypot(x1-x0,z1-z0),n=Math.round(len/12),ang=Math.atan2(x1-x0,z1-z0);
+    for(let k=0;k<n;k++){
+      const ax=lerp(x0,x1,k/n),az=lerp(z0,z1,k/n),bx=lerp(x0,x1,(k+1)/n),bz=lerp(z0,z1,(k+1)/n),mx=(ax+bx)/2,mz=(az+bz)/2,l=Math.hypot(bx-ax,bz-az);
+      if(gap&&Math.abs(mx-gap)<9) continue;
+      const fr={x0:Math.min(ax,bx)-0.35,x1:Math.max(ax,bx)+0.35,z0:Math.min(az,bz)-0.35,z1:Math.max(az,bz)+0.35};
+      beginObj(mx,mz,{y:CY,y0:CY,y1:CY+3.8,size:2,r:l/2,top:3.8,color:'#9aa0a6',regrow:true,breakable:true,fence:true,fr,hp:45,maxHp:45,above:[]});
+      const b=P2(mx,mz),dx=(bx-ax)/l,dz=(bz-az)/l;
+      for(const [px,pz] of [[ax,az],[mx,mz],[bx,bz]]) b.push(Q(G.cyl6,'#7d8288',px,CY+1.8,pz,0.22,3.6,0.22));
+      for(let q=1;q<12;q++) if(q!==6) b.push(Q(G.box,'#b4bac0',ax+dx*l*q/12,CY+1.75,az+dz*l*q/12,0.05,3.2,0.05,0,ang,0,0));
+      for(const yy of [0.2,1.75,3.35]) b.push(Q(G.box,'#9aa0a6',mx,CY+yy,mz,0.07,0.07,l,0,ang,0,0));
+      b.push(Q(G.box,'#5a5f66',mx,CY+3.6,mz,0.5,0.08,l,0,ang,0.6,0));
+      addBox(fr.x0,fr.x1,fr.z0,fr.z1,CY-0.5,CY+3.8).noClimb=true;
+      endObj();
     }
   };
   fence(BASE.x0,BASE.z0,BASE.x1,BASE.z0,410); fence(BASE.x0,BASE.z1,BASE.x1,BASE.z1); fence(BASE.x0,BASE.z0,BASE.x0,BASE.z1); fence(BASE.x1,BASE.z0,BASE.x1,BASE.z1);
@@ -1663,12 +1687,22 @@ function deckStrip(pts,o0,o1,lift,color,dash=0){
   const pos=[],col=[],nrm=[]; _c.set(color);
   for(let i=0;i<pts.length-1;i++){
     if(dash&&i%2) continue;
-    const a=pts[i],b=pts[i+1],dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1,nx=dz/l,nz=-dx/l;
-    const q=[[a,o0],[a,o1],[b,o0],[b,o1]].map(([p,o])=>[p.x+nx*o,p.h+lift,p.z+nz*o]);
+    const a=pts[i],b=pts[i+1];
+    const q=[[a,o0],[a,o1],[b,o0],[b,o1]].map(([p,o])=>[p.x+p.nx*o,p.h+lift,p.z+p.nz*o]);
     for(const k of [0,2,1,1,2,3]){pos.push(...q[k]); col.push(_c.r,_c.g,_c.b); nrm.push(0,1,0);}
   }
   const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setAttribute('normal',new THREE.Float32BufferAttribute(nrm,3)); g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
   return g;
+}
+// a solid band swept along the deck; sec is its cross-section as [side offset, height] corners, clockwise from top-left
+function deckSweep(pts,sec,color){
+  const pos=[],col=[],nrm=[],m=sec.length,at=(p,[o,y])=>[p.x+p.nx*o,p.h+y,p.z+p.nz*o];
+  const tri=(A,B,C)=>{pos.push(...A,...B,...C); for(let k=0;k<3;k++){col.push(_c.r,_c.g,_c.b); nrm.push(0,1,0);}};
+  _c.set(color);
+  for(let i=0;i<pts.length-1;i++){const a=pts[i],b=pts[i+1]; for(let k=0;k<m;k++){const s0=sec[k],s1=sec[(k+1)%m],A0=at(a,s0),A1=at(a,s1),B0=at(b,s0),B1=at(b,s1); tri(A0,B0,A1); tri(A1,B0,B1);}}
+  const f=pts[0],l=pts[pts.length-1]; for(let k=1;k<m-1;k++){tri(at(f,sec[0]),at(f,sec[k]),at(f,sec[k+1])); tri(at(l,sec[0]),at(l,sec[k+1]),at(l,sec[k]));}
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setAttribute('normal',new THREE.Float32BufferAttribute(nrm,3)); g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  g.computeVertexNormals(); return g;
 }
 const roadPieces=[];
 for(const route of roadRoutes){
@@ -1678,13 +1712,13 @@ for(const route of roadRoutes){
     beginObj(cx,cz,{y:hy,size:7,r:Math.hypot(b.x-a.x,b.z-a.z)/2+2,top:1.2,color:'#3a3d42',regrow:true,road:{a,b,pts}});
     const bk=B(cx,cz);
     for(let k=0;k<pts.length-1;k++){
-      const p=pts[k],q=pts[k+1],dx=q.x-p.x,dz=q.z-p.z,l=Math.hypot(dx,dz),ang=Math.atan2(dx,dz),pitch=-Math.atan2(q.h-p.h,l),mx=(p.x+q.x)/2,mz=(p.z+q.z)/2,mh=(p.h+q.h)/2,nx=dz/l,nz=-dx/l;
-      // concrete deck slab with a lip, and jersey barriers along both edges
-      bk.push(Q(G.box,'#a29d92',mx,mh-0.75,mz,RW*2+2.4,1.4,l+0.25,pitch,ang,0,0.03));
-      for(const s of [-1,1]) bk.push(Q(G.box,'#c9c4b8',mx+nx*s*(RW+0.7),mh+0.45,mz+nz*s*(RW+0.7),0.7,1.0,l+0.25,pitch,ang,0,0.03));
-      // pillars with a cap beam wherever the deck is up off the ground
-      if((i+k)%3===0){const gy=groundH(p.x,p.z),ht=p.h-1.4-gy; if(ht>2){bk.push(Q(G.box,'#b3aea2',p.x,gy+ht/2-0.5,p.z,2.4,ht+1,2.4,0,ang,0,0.04)); bk.push(Q(G.box,'#a29d92',p.x,p.h-1.9,p.z,RW*2+1,1.2,2.8,0,ang,0,0.03)); if(ht>4) addObs(p.x,p.z,1.5);}}
+      const p=pts[k],q=pts[k+1],ang=Math.atan2(q.x-p.x,q.z-p.z);
+      // pillars with a cap beam wherever the deck is up off the ground; they only block you down below
+      if((i+k)%3===0){const gy=groundH(p.x,p.z),ht=p.h-1.4-gy; if(ht>2){bk.push(Q(G.box,'#b3aea2',p.x,gy+ht/2-0.5,p.z,2.4,ht+1,2.4,0,ang,0,0.04)); bk.push(Q(G.box,'#a29d92',p.x,p.h-1.9,p.z,RW*2+1,1.2,2.8,0,ang,0,0.03)); if(ht>4) addBox(p.x-1.3,p.x+1.3,p.z-1.3,p.z+1.3,gy-1,p.h-1.6).noClimb=true;}}
     }
+    // one unbroken slab and two jersey barriers swept along the curve, so nothing overlaps at the bends
+    bk.push(deckSweep(pts,[[-RW-1.2,-0.02],[RW+1.2,-0.02],[RW+1.2,-1.45],[-RW-1.2,-1.45]],'#a29d92'));
+    for(const sd of [-1,1]){const o0=Math.min(sd*(RW+0.35),sd*(RW+1.05)),o1=Math.max(sd*(RW+0.35),sd*(RW+1.05)); bk.push(deckSweep(pts,[[o0,1.0],[o1,1.0],[o1,-0.05],[o0,-0.05]],'#c9c4b8'));}
     bk.push(deckStrip(pts,-RW,RW,0.04,'#34373c'));
     for(const s of [-1,1]){bk.push(deckStrip(pts,s*0.18,s*0.42,0.08,'#f2c230')); bk.push(deckStrip(pts,s*(RW-0.7),s*(RW-0.4),0.08,'#eeeeee')); bk.push(deckStrip(pts,s*RW*0.5-0.15,s*RW*0.5+0.15,0.08,'#eeeeee',1));}
     const o=endObj(); roadPieces.push(o);
@@ -1712,12 +1746,20 @@ function makeRoadRuin(o){
   }
   const m=mesh(p); scene.add(m); return m;
 }
+// smashing through a freeway span with your body hurts: concrete and steel come down on you
+function freewayHurt(o){
+  if(clock<(P.roadHurtT||0)) return; P.roadHurtT=clock+0.7;
+  const {a,b}=o.road,y=(a.h+b.h)/2;
+  hurtBy(6+P.maxHp*0.045,'A collapsing freeway',(a.x+b.x)/2,(a.z+b.z)/2,false,'bullet');
+  burst(P.x,y,P.z,'#8a8580',16,Math.max(1,P.vis*0.3),6,4); Snd.dinoHurt();
+  floatText(pickM(['OOF! Concrete!','OUCH!','That hurt!']),P.x,P.y+P.vis*1.6,P.z,'#ff8a6a',24);
+}
 function wreckRoad(o){
   if(!o.alive) return 0;
   o.alive=false; hideObj(o); o.siteMesh=makeRoadRuin(o);
   const {a,b}=o.road,mx=(a.x+b.x)/2,mz=(a.z+b.z)/2,y=(a.h+b.h)/2;
   chunks(mx,y,mz,['#a29d92','#34373c','#8a8580','#f2c230'],22,1.8,1.4,0.6); burst(mx,y,mz,'#8a8580',30,Math.min(5,1.5+P.vis*0.2),8,5);
-  Snd.crumble(clamp(1-Math.hypot(P.x-mx,P.z-mz)/320,0,1)); shake=Math.max(shake,0.3);
+  {const v=clamp(1-Math.hypot(P.x-mx,P.z-mz)/320,0,1); Snd.crumble(v); if(v>0.2) setTimeout(()=>Snd.impact(v*0.7),140);} shake=Math.max(shake,0.3);
   o.regrowT=RR(40,70); if(!eatenStatics.includes(o)) eatenStatics.push(o);
   if(role==='dino'){P.score+=25; floatText('Freeway smashed! +25',mx,y+P.vis+3,mz,'#ffd23f',24);}
   return 25;
@@ -1867,6 +1909,97 @@ function partObj(x,z,y0,y1,r,hp,col,extra){beginObj(x,z,Object.assign({y:y0,y0,y
   BILLS.push([['NUCLEAR POWER','PLEASE DO NOT EAT THE REACTOR'],['#1b1b1b','#3a3a2a'],'#ffd23f']);
   billboard(440,CY+9,PLANT.z1+4,18,8,0,BILLS.length-1); P2(440,PLANT.z1+4).push(Q(G.box,'#555',434,CY+2.5,PLANT.z1+4.3,0.5,5,0.5),Q(G.box,'#555',446,CY+2.5,PLANT.z1+4.3,0.5,5,0.5));
 })();
+/* ================= the castle on the mountain: walls, towers, a gatehouse and a keep, all smashable ================= */
+(function buildCastle(){
+  const cx=CASTLE.x,cz=CASTLE.z,CY=CASTLE.y,S=50,T=5,WH=16;
+  const STONE='#a7a194',DARK='#8e897d',ROOF='#3b4f7c',RED='#b8322a',GOLD='#e0b13a',WOOD='#5a3e2b',HOLE='#2a2622';
+  const part=(x,z,y0,y1,r,hp,col,draw,box)=>{const o=partObj(x,z,y0,y1,r,hp,col,{castle:true}); draw(B(x,z)); if(box) addBox(...box); endObj(); return o;};
+  const stack=secs=>{for(let k=0;k<secs.length;k++) secs[k].above=secs.slice(k+1);};
+  // paved courtyard
+  B(cx,cz).push(Q(G.box,'#958f82',cx,CY+0.05,cz,2*S+6,0.25,2*S+6,0,0,0,0.04));
+  for(let k=0;k<5;k++) B(cx,cz+S+6+k*5).push(Q(G.box,'#958f82',cx,CY+0.05-k*0.6,cz+S+6+k*5,12,0.4,5.2,0,0,0,0.04));
+  // a straight stretch of curtain wall with battlements on the outside edge
+  function wall(x0,z0,x1,z1){
+    const alongX=z0===z1,len=alongX?x1-x0:z1-z0,mx=cx+(x0+x1)/2,mz=cz+(z0+z1)/2,out=alongX?Math.sign(z0):Math.sign(x0);
+    const w=alongX?len:T,d=alongX?T:len;
+    part(mx,mz,CY,CY+WH,len/2,220,STONE,b=>{
+      b.push(Q(G.box,STONE,mx,CY+WH/2,mz,w,WH,d,0,0,0,0.05));
+      b.push(Q(G.box,DARK,mx,CY+0.8,mz,w+0.6,1.6,d+0.6,0,0,0,0.04));
+      for(let q=-len/2+1.3;q<=len/2-1.3;q+=2.6){
+        const px=alongX?mx+q:mx+out*(T/2-0.6),pz=alongX?mz+out*(T/2-0.6):mz+q;
+        b.push(Q(G.box,STONE,px,CY+WH+1.1,pz,alongX?1.4:1.2,2.2,alongX?1.2:1.4,0,0,0,0.05));
+      }
+      for(let q=-len/2+5;q<len/2-3;q+=8){const px=alongX?mx+q:mx+out*(T/2+0.03),pz=alongX?mz+out*(T/2+0.03):mz+q; b.push(Q(G.box,HOLE,px,CY+WH*0.62,pz,alongX?0.6:0.1,2.4,alongX?0.1:0.6,0,0,0,0));}
+    },[mx-w/2,mx+w/2,mz-d/2,mz+d/2,CY,CY+WH]);
+  }
+  // north, west and east walls in three stretches each; the south wall is split by the gatehouse below
+  for(let k=0;k<3;k++){const a=-41+k*82/3,b=a+82/3; wall(a,-S,b,-S); wall(-S,a,-S,b); wall(S,a,S,b);}
+  // round towers: a fat base, a narrower middle, and a battlemented top with a pointy roof
+  function tower(x,z,r,h,roofH){
+    const x0=cx+x,z0=cz+z,h1=h*0.45,h2=h*0.9;
+    const a=part(x0,z0,CY,CY+h1,r,260,STONE,b=>{b.push(Q(G.cyl12,STONE,x0,CY+h1/2,z0,r*2,h1,r*2,0,0,0,0.05)); b.push(Q(G.cyl12,DARK,x0,CY+0.9,z0,r*2+0.8,1.8,r*2+0.8,0,0,0,0.04));},[x0-r*0.85,x0+r*0.85,z0-r*0.85,z0+r*0.85,CY,CY+h1]);
+    const m=part(x0,z0,CY+h1,CY+h2,r,240,STONE,b=>{b.push(Q(G.cyl12,STONE,x0,CY+(h1+h2)/2,z0,r*1.9,h2-h1,r*1.9,0,0,0,0.05)); for(let q=0;q<4;q++){const an=q/4*TAU+0.4; b.push(Q(G.box,HOLE,x0+Math.sin(an)*r*0.96,CY+(h1+h2)/2,z0+Math.cos(an)*r*0.96,0.6,2.6,0.6,0,an,0,0));}},[x0-r*0.8,x0+r*0.8,z0-r*0.8,z0+r*0.8,CY+h1,CY+h2]);
+    const t=part(x0,z0,CY+h2,CY+h+roofH,r,200,ROOF,b=>{
+      b.push(Q(G.cyl12,DARK,x0,CY+h2+0.6,z0,r*2.15,1.2,r*2.15,0,0,0,0.04)); b.push(Q(G.cyl12,STONE,x0,CY+(h2+h)/2+0.6,z0,r*2,h-h2,r*2,0,0,0,0.05));
+      for(let q=0;q<12;q++){const an=q/12*TAU; b.push(Q(G.box,STONE,x0+Math.sin(an)*r*0.92,CY+h+1.4,z0+Math.cos(an)*r*0.92,1.5,2,1.2,0,an,0,0.05));}
+      b.push(Q(G.cone8,ROOF,x0,CY+h+roofH/2+0.4,z0,r*2.1,roofH,r*2.1,0,0,0,0.04));
+      b.push(Q(G.cyl6,'#5a5a5a',x0,CY+h+roofH+2,z0,0.25,4,0.25)); b.push(Q(G.box,RED,x0+1.4,CY+h+roofH+3.2,z0,2.6,1.6,0.1,0,0,0,0));
+    },[x0-r*0.8,x0+r*0.8,z0-r*0.8,z0+r*0.8,CY+h2,CY+h]);
+    stack([a,m,t]);
+  }
+  for(const [x,z] of [[-S,-S],[S,-S],[-S,S],[S,S]]) tower(x,z,9,32,16);
+  // gatehouse: two towers either side of an open arch with a raised portcullis
+  tower(-12,S,6.5,24,10); tower(12,S,6.5,24,10);
+  wall(-41,S,-17,S); wall(17,S,41,S);
+  {const gx=cx,gz=cz+S;
+    part(gx,gz,CY+9,CY+20,7,220,STONE,b=>{
+      b.push(Q(G.box,STONE,gx,CY+14.5,gz,11,11,7,0,0,0,0.05));
+      for(let q=-4.5;q<=4.5;q+=3) b.push(Q(G.box,STONE,gx+q,CY+21.1,gz+2.9,1.4,2.2,1.2,0,0,0,0.05));
+      for(let q=-4;q<=4;q+=1.6) b.push(Q(G.box,'#3a3a3a',gx+q,CY+10.2,gz+3.2,0.25,2.4,0.25,0,0,0,0));
+      b.push(Q(G.box,'#3a3a3a',gx,CY+9.3,gz+3.2,9,0.3,0.3,0,0,0,0));
+      for(const q of [-3.4,3.4]){b.push(Q(G.box,RED,gx+q,CY+14.5,gz+3.6,2.4,6.5,0.12,0,0,0,0)); b.push(Q(G.box,GOLD,gx+q,CY+15.5,gz+3.68,1.2,1.2,0.05,0,0,0,0));}
+    },[gx-6,gx+6,gz-3.5,gz+3.5,CY+9,CY+20]);
+    for(const q of [-6.2,6.2]) B(gx+q,gz).push(Q(G.box,DARK,gx+q,CY+4.5,gz,1.2,9,7,0,0,0,0.04));
+  }
+  // the keep: three storeys stacked, with turrets and a big flag on top
+  {const kx=cx,kz=cz-10,L=[[32,0,15],[29,15,30],[26,30,42]],secs=[];
+    L.forEach(([w,y0,y1],li)=>{
+      secs.push(part(kx,kz,CY+y0,CY+y1+(li===2?16:0),w/2,320,STONE,b=>{
+        b.push(Q(G.box,li===1?'#a29c8f':STONE,kx,CY+(y0+y1)/2,kz,w,y1-y0,w,0,0,0,0.05));
+        b.push(Q(G.box,DARK,kx,CY+y0+0.6,kz,w+0.8,1.2,w+0.8,0,0,0,0.04));
+        for(const [fx,fz] of [[1,0],[-1,0],[0,1],[0,-1]]) for(let q=-1;q<=1;q++){if(li===0&&fz===1&&q===0) continue; b.push(Q(G.box,HOLE,kx+fx*(w/2+0.03)+(fz?q*w*0.28:0),CY+(y0+y1)/2+1,kz+fz*(w/2+0.03)+(fx?q*w*0.28:0),fx?0.1:1.2,3.2,fz?0.1:1.2,0,0,0,0));}
+        if(li===0){b.push(Q(G.box,WOOD,kx,CY+3.2,kz+w/2+0.05,4.4,6.4,0.2,0,0,0,0.03)); b.push(Q(G.box,DARK,kx,CY+6.8,kz+w/2+0.1,5.6,0.8,0.4,0,0,0,0.03));}
+        if(li===2){
+          for(let q=-w/2+1.2;q<=w/2-1.2;q+=2.6) for(const [fx,fz] of [[1,0],[-1,0],[0,1],[0,-1]]) b.push(Q(G.box,STONE,kx+(fx?fx*(w/2-0.6):q),CY+y1+1.1,kz+(fz?fz*(w/2-0.6):q),1.3,2.2,1.3,0,0,0,0.05));
+          for(const [sx,sz] of [[-1,-1],[1,-1],[-1,1],[1,1]]){const tx=kx+sx*(w/2-1),tz=kz+sz*(w/2-1); b.push(Q(G.cyl8,STONE,tx,CY+y1+3,tz,6,6,6,0,0,0,0.05)); b.push(Q(G.cone8,ROOF,tx,CY+y1+9,tz,7,6,7,0,0,0,0.04));}
+          b.push(Q(G.cyl6,'#5a5a5a',kx,CY+y1+8,kz,0.4,16,0.4)); b.push(Q(G.box,RED,kx+3.4,CY+y1+13.5,kz,6.4,4,0.15,0,0,0,0)); b.push(Q(G.box,GOLD,kx+3.4,CY+y1+13.5,kz,2,2,0.2,0,Math.PI/4,0,0));
+        }
+      },[kx-w/2,kx+w/2,kz-w/2,kz+w/2,CY+y0,CY+y1]));
+    });
+    stack(secs);
+  }
+  // great hall and chapel in the courtyard
+  {const hx=cx+28,hz=cz+16,w=18,d=28,h=11,s=w*0.74+0.6;
+    part(hx,hz,CY,CY+h+s*0.5,d/2,240,'#c9b99a',b=>{
+      b.push(Q(G.box,'#c9b99a',hx,CY+h/2,hz,w,h,d,0,0,0,0.05)); b.push(Q(G.box,'#7a2e2a',hx,CY+h,hz,s,s,d+1,0,0,Math.PI/4,0.04));
+      for(let q=-d/2+4;q<d/2-2;q+=5) for(const sd of [-1,1]) b.push(Q(G.box,'#3d5a7a',hx+sd*(w/2+0.03),CY+h*0.55,hz+q,0.1,4,1.4,0,0,0,0));
+      b.push(Q(G.box,WOOD,hx-w/2-0.05,CY+2.4,hz,0.2,4.8,3.4,0,0,0,0.03));
+    },[hx-w/2,hx+w/2,hz-d/2,hz+d/2,CY,CY+h]);
+  }
+  {const hx=cx-28,hz=cz+20,w=12,d=18,h=9,s=w*0.74+0.6;
+    part(hx,hz,CY,CY+20,d/2,200,'#d8cdb4',b=>{
+      b.push(Q(G.box,'#d8cdb4',hx,CY+h/2,hz,w,h,d,0,0,0,0.05)); b.push(Q(G.box,'#5a4a40',hx,CY+h,hz,s,s,d+1,0,0,Math.PI/4,0.04));
+      b.push(Q(G.box,'#d8cdb4',hx,CY+7,hz+d/2-2,4.4,14,4.4,0,0,0,0.05)); b.push(Q(G.cone4,'#5a4a40',hx,CY+17,hz+d/2-2,6.2,6,6.2,0,Math.PI/4,0,0.04));
+      b.push(Q(G.box,GOLD,hx,CY+21,hz+d/2-2,0.3,2.4,0.3,0,0,0,0)); b.push(Q(G.box,GOLD,hx,CY+21.4,hz+d/2-2,1.4,0.3,0.3,0,0,0,0));
+      for(const sd of [-1,1]) for(let q=-5;q<=5;q+=5) b.push(Q(G.box,'#b84a7a',hx+sd*(w/2+0.03),CY+5,hz+q,0.1,3.4,1.2,0,0,0,0));
+    },[hx-w/2,hx+w/2,hz-d/2,hz+d/2,CY,CY+h]);
+  }
+  // a well and some carts in the yard
+  B(cx+8,cz+30).push(Q(G.cyl8,DARK,cx+8,CY+0.7,cz+30,3.2,1.4,3.2,0,0,0,0.05),Q(G.box,WOOD,cx+8,CY+3,cz+30,3.6,0.4,0.6,0,0,0,0.03),Q(G.box,WOOD,cx+6.4,CY+2,cz+30,0.3,2.6,0.3),Q(G.box,WOOD,cx+9.6,CY+2,cz+30,0.3,2.6,0.3));
+  BILLS.push([['CASTLE MUNCHENSTEIN','EST. 1312 · NO DINOS'],['#3b4f7c','#2a3550'],'#e0b13a']);
+  billboard(cx+24,CY+6,cz+S+16,14,6,0,BILLS.length-1); B(cx+24,cz+S+16).push(Q(G.box,WOOD,cx+19,CY+2,cz+S+16.3,0.5,4,0.5),Q(G.box,WOOD,cx+29,CY+2,cz+S+16.3,0.5,4,0.5));
+})();
+
 // a plant part takes a hit; when it gives way everything stacked on it comes down too
 function hitPart(o,dmg,byHuman){
   if(!o.alive) return;
@@ -1877,13 +2010,15 @@ function breakPart(o,byHuman,depth){
   if(!o.alive) return;
   o.alive=false; hideObj(o);
   const my=(o.y0+o.y1)/2;
-  chunks(o.x,my,o.z,[o.color,o.color,'#8a8580','#77726c'],Math.round(clamp(o.r,6,24)),clamp(o.r*0.12,0.8,3.2),1.6,0.8,{w:o.r*1.6});
-  burst(o.x,my,o.z,'#8a8580',40,Math.min(8,2+o.r*0.15),10,6); burst(o.x,my,o.z,'#e8e4da',20,Math.min(6,1+o.r*0.1),8,8);
-  if(depth===0){Snd.crumble(clamp(1-Math.hypot(P.x-o.x,P.z-o.z)/400,0.1,1)); shake=Math.max(shake,0.5);}
+  if(o.fence){chunks(o.x,my,o.z,['#9aa0a6','#7d8288'],6,0.5,1.6,0.8,{w:o.r*1.6}); burst(o.x,my,o.z,'#c9c4b8',10,1,5,3);}
+  else {chunks(o.x,my,o.z,[o.color,o.color,'#8a8580','#77726c'],Math.round(clamp(o.r,6,24)),clamp(o.r*0.12,0.8,3.2),1.6,0.8,{w:o.r*1.6});
+  burst(o.x,my,o.z,'#8a8580',40,Math.min(8,2+o.r*0.15),10,6); burst(o.x,my,o.z,'#e8e4da',20,Math.min(6,1+o.r*0.1),8,8);}
+  if(depth===0){const v=clamp(1-Math.hypot(P.x-o.x,P.z-o.z)/400,0.1,1); if(o.fence) Snd.clang(v); else {Snd.crumble(v); if(o.castle) setTimeout(()=>Snd.impact(v*0.8),160); shake=Math.max(shake,0.5);}}
   if(o.reactor&&depth===0) meltdown(o);
-  o.regrowT=RR(70,100)+(o.idx||0)*4+depth*3; o.hp=o.maxHp; if(!eatenStatics.includes(o)) eatenStatics.push(o);
-  if(role==='human'&&byHuman) addPoints(-40,o.x,my,o.z,'Power plant damaged! -40');
-  else if(role==='dino'&&depth===0){P.score+=120; floatText('Power plant smashed! +120',o.x,my,o.z,'#7dff6a',26);}
+  o.regrowT=(o.fence?RR(30,45):RR(70,100))+(o.idx||0)*4+depth*3; o.hp=o.maxHp; if(!eatenStatics.includes(o)) eatenStatics.push(o);
+  if(o.fence){if(role==='dino'&&depth===0){P.score+=5; floatText('Fence down! +5',o.x,my+2,o.z,'#ffd23f',20);}}
+  else if(role==='human'&&byHuman) addPoints(-40,o.x,my,o.z,(o.castle?'Castle':'Power plant')+' damaged! -40');
+  else if(role==='dino'&&depth===0){const n=o.castle?100:120; P.score+=n; floatText((o.castle?'Castle':'Power plant')+' smashed! +'+n,o.x,my,o.z,'#7dff6a',26);}
   for(const a of o.above) setTimeout(()=>breakPart(a,byHuman,depth+1),120*(depth+1));
 }
 
@@ -1892,7 +2027,7 @@ flushBuildings();
 flushBuckets(buckets,MAT,true);
 flushBuckets(decals,DECAL,false);
 // clear the trees and rocks that ended up on a highway or inside the suburbs and the plant
-for(const o of edibles){if(o.keep||o.rect||o.tut||!o.alive) continue; if(nearRoad(o.x,o.z,o.r+0.5)||inRect(o.x,o.z,SUB,2)||inRect(o.x,o.z,PLANT,6)){hideObj(o); o.alive=false; o.gone=true;}}
+for(const o of edibles){if(o.keep||o.rect||o.tut||!o.alive) continue; if(nearRoad(o.x,o.z,o.r+0.5)||inRect(o.x,o.z,SUB,2)||inRect(o.x,o.z,PLANT,6)||Math.hypot(o.x-CASTLE.x,o.z-CASTLE.z)<CASTLE.r+8){hideObj(o); o.alive=false; o.gone=true;}}
 const glowMesh=new THREE.InstancedMesh(new THREE.SphereGeometry(0.5,8,6),new THREE.MeshBasicMaterial({toneMapped:false}),glows.length);
 {const d=new THREE.Object3D(); glows.forEach((g,k)=>{d.position.set(g.x,g.y,g.z); d.scale.setScalar(g.lamp?0.7:1.2); d.updateMatrix(); glowMesh.setMatrixAt(k,d.matrix); glowMesh.setColorAt(k,g.lamp?new THREE.Color(2.2,1.9,1.3):new THREE.Color(4,0.2,0.15)); if(g.obj) g.obj.glows.push(k);}); scene.add(glowMesh);}
 
@@ -2141,6 +2276,13 @@ function updateStatics(){
   const reach=P.vis*0.55,markR=16+P.size*4,cool=clock<bldCdUntil;
   const mv=Math.hypot(P.vx,P.vz);
   forEdiblesNear(P.x,P.z,Math.max(markR,P.vis+70),o=>{
+    if(o.fence){
+      if(o.alive&&clock>(o.hitCD||0)&&P.y<o.y1&&rectDist(P.x,P.z,o.fr)<P.vis*0.45+0.9){
+        if((P.size>=3&&mv>2)||charging>0) breakPart(o,false,0);
+        else if(P.biteT>0.2||P.snapT>0.05||(mv>2&&P.size>=1.6)){o.hitCD=clock+0.4; hitPart(o,20+P.size*8,false);}
+      }
+      return;
+    }
     if(o.breakable){
       if(o.alive&&role==='dino'&&P.size>=3&&(P.biteT>0.2||P.snapT>0.05||charging>0)&&clock>(o.hitCD||0)){
         const hx=P.x+Math.sin(P.h)*P.vis*0.95,hz=P.z+Math.cos(P.h)*P.vis*0.95,hy=P.y+P.vis*1.1;
@@ -2149,7 +2291,7 @@ function updateStatics(){
       return;
     }
     if(o.road){
-      if(o.alive&&P.size>=6&&(mv>3||P.biteT>0||P.snapT>0||charging>0)){const {a,b}=o.road,vx=b.x-a.x,vz=b.z-a.z,t=clamp(((P.x-a.x)*vx+(P.z-a.z)*vz)/((vx*vx+vz*vz)||1),0,1),hd=lerp(a.h,b.h,t); if(Math.hypot(P.x-(a.x+vx*t),P.z-(a.z+vz*t))<P.vis*0.4+RW*0.6&&P.y+P.vis*1.5>hd-1&&P.y<hd+1.5) wreckRoad(o);}
+      if(o.alive&&P.size>=6&&(mv>3||P.biteT>0||P.snapT>0||charging>0)){const {a,b}=o.road,vx=b.x-a.x,vz=b.z-a.z,t=clamp(((P.x-a.x)*vx+(P.z-a.z)*vz)/((vx*vx+vz*vz)||1),0,1),hd=lerp(a.h,b.h,t); if(Math.hypot(P.x-(a.x+vx*t),P.z-(a.z+vz*t))<P.vis*0.4+RW*0.6&&P.y+P.vis*1.5>hd-1&&P.y<hd+1.5){const walked=!(P.biteT>0||P.snapT>0); wreckRoad(o); if(walked) freewayHurt(o);}}
       return;
     }
     if(!o.alive||!(P.size>o.size*EAT_RATIO)||(picky()&&!(o.rect&&o.size>3))) return;
@@ -2357,6 +2499,14 @@ const Snd={ctx:null,master:null,muted:false,nb:null,siren:null,sirenG:null,
     this.roarSrc=short?this.play('roarc',0.85,r,2.0,1.6/r):this.play('roarc',0.95,r,2.0,2.5/r);
   },
   whoosh(){this.noise(0.35,0.25,900);},
+  // a dino's pained grunt and its dying bellow, cut from the roar recording
+  dinoHurt(){ if(!this.bufs.roarc) return this.hurt(); if(clock-(this.lastGrunt||-9)<0.5) return; this.lastGrunt=clock; const r=this.sizeRate()*RR(1.3,1.5); this.play('roarc',0.6,r,2.3,0.5/r); },
+  dinoDie(){ if(!this.bufs.roarc) return this.die(); if(this.roarSrc) try{this.roarSrc.stop();}catch(e){} const r=this.sizeRate()*0.7; this.roarSrc=this.play('roarc',0.95,r,2.0,2.8/r); },
+  // a wild dino that starts chasing you roars, quieter the farther away it is
+  roarAt(dist,size){ if(!this.bufs.roarc||clock-(this.lastWild||-9)<5) return; const v=clamp(0.7-dist/260,0,0.7); if(v<0.06) return; this.lastWild=clock; const r=clamp(1.35-Math.log(Math.max(1,size))*0.14,0.75,1.35)*RR(0.95,1.05); this.play('roarc',v,r,2.0,1.4/r); },
+  // chain-link fence ripping and clattering
+  clang(v=1){ if(clock-(this.lastClang||-9)<0.15) return; this.lastClang=clock; this.tone(820,0.25,'square',0.05*v,560); this.tone(1240,0.45,'triangle',0.07*v,980,0.02); this.noise(0.3,0.2*v,2600); this.noise(0.2,0.14*v,700,0.08); },
+  lock(){ this.tone(1320,0.07,'square',0.05); this.tone(1760,0.1,'square',0.05,null,0.09); },
   sirenUpdate(on,t){ if(!this.ctx) return; this.sirenG.gain.setTargetAtTime(on&&!this.muted?0.035:0,this.ctx.currentTime,0.1); this.siren.frequency.setTargetAtTime(760+260*Math.sin(t*4.5),this.ctx.currentTime,0.02); },
 };
 
@@ -2464,7 +2614,7 @@ function updateCreatures(dt,time){
       const defend=playing&&!canEat&&!sp.aggro&&sp.temper==='fight'&&!e.dummy;
       hostile=threat||defend;
       if(playing&&(e.scared>0||((canEat||(!sp.aggro&&!defend))&&d<alertR))){dirx=-dx/d; dirz=-dz/d; spd=sp.speed*(sp.aggro?0.8:1); e.mode='flee';}
-      else if(hostile&&e.tired<=0&&d<(defend?alertR:sp.aggro+P.size*1.5+e.size)&&inRect(P.x,P.z,e.zone,20)){dirx=dx/d; dirz=dz/d; spd=sp.speed*(defend?1.15:1); e.chaseT+=dt; e.mode='chase'; if(e.chaseT>(sp.chase||3)){e.tired=4; e.chaseT=0;}}
+      else if(hostile&&e.tired<=0&&d<(defend?alertR:sp.aggro+P.size*1.5+e.size)&&inRect(P.x,P.z,e.zone,20)){dirx=dx/d; dirz=dz/d; spd=sp.speed*(defend?1.15:1); e.chaseT+=dt; if(e.mode!=='chase'&&sp.dino) Snd.roarAt(d,e.size); e.mode='chase'; if(e.chaseT>(sp.chase||3)){e.tired=4; e.chaseT=0;}}
       else{
         e.chaseT=Math.max(0,e.chaseT-dt); e.mode='wander';
         e.timer-=dt; if(e.timer<=0){e.timer=RR(2,6); e.wh=e.h+RR(-1.3,1.3); e.walk=Math.random()<0.55;}
@@ -3161,7 +3311,7 @@ function hurtBy(dmg,who,fx,fz,knock,kind){
   hitFx(kind||(knock?'rocket':'bullet'),dmg);
   if(knock){const dx=P.x-fx,dz=P.z-fz,d=Math.hypot(dx,dz)||1,kb=8; P.vx+=dx/d*kb; P.vz+=dz/d*kb; P.vy=4+P.vis*0.4; P.onGround=false; shake=Math.max(shake,0.4);}
   flash=Math.max(flash,knock?1:0.45);
-  if(clock-hitSoundT>0.12){hitSoundT=clock; if(knock) Snd.hurt(); else Snd.hit();}
+  if(clock-hitSoundT>0.12){hitSoundT=clock; if(role==='dino'&&(knock||dmg>P.maxHp*0.04)) Snd.dinoHurt(); else if(knock) Snd.hurt(); else Snd.hit();}
   if(knock||Math.random()<0.3) floatText('-'+Math.round(dmg),P.x+RR(-1,1)*P.vis*0.3,P.y+P.vis*1.6,P.z,'#ff5d5d',knock?26:18);
   if(P.hp<=0) die(who);
 }
@@ -3356,7 +3506,7 @@ function biteFrom(e){
 function die(who){
   if(!P.alive) return;
   if(H.flying&&H.jet){scene.remove(H.jet.root); H.jet=null; H.flying=false;}
-  P.hp=0; P.alive=false; P.dieT=0; P.killer=who; Snd.die(); sendPresence(true);
+  P.hp=0; P.alive=false; P.dieT=0; P.killer=who; if(role==='dino') Snd.dinoDie(); else Snd.die(); sendPresence(true);
   setTimeout(showGameOver,1500);
 }
 
@@ -3782,10 +3932,20 @@ function fireRocketH(){
   netShot(2,t.x,t.y,t.z);
   if(tutorial) tutorialEvent('rocket');
 }
+// a jet missile locks on by itself to the dino nearest the middle of the pilot's view
+function jetSeek(){
+  let best=null,bs=1e9;
+  for(const t of dinoTargets()){
+    const d=Math.hypot(t.x-P.x,t.y-P.y,t.z-P.z); if(d>900) continue;
+    _av3.set(t.x,t.y,t.z).project(camera); if(_av3.z>1||Math.abs(_av3.x)>0.95||Math.abs(_av3.y)>0.95) continue;
+    const sc=Math.hypot(_av3.x,_av3.y)+d/900; if(sc<bs){bs=sc; best=t;}
+  }
+  return best;
+}
 function fireJetMissile(){
   if(H.msl<=0) return;
   H.missileCD=0.35; H.msl--; if(H.msl<=0) H.mslReload=10;
-  const t=AIM.t||{kind:'spot',x:AIM.x,y:AIM.y,z:AIM.z,r:1},side=(H.mslSide=-(H.mslSide||1)),w=(H.jet&&H.jet.wing)||5;
+  const t=AIM.t||jetSeek()||{kind:'spot',x:AIM.x,y:AIM.y,z:AIM.z,r:1},side=(H.mslSide=-(H.mslSide||1)),w=(H.jet&&H.jet.wing)||5;
   const ox=P.x+Math.cos(P.h)*side*w,oy=P.y-1.2,oz=P.z-Math.sin(P.h)*side*w,sp=H.speed;
   launchHumanShot('missile',ox,oy,oz,Math.sin(P.h)*sp+Math.cos(P.h)*side*6,-6,Math.cos(P.h)*sp-Math.sin(P.h)*side*6,t);
   burst(ox,oy,oz,'#cfcfcf',8,1.2,3,2,-1); Snd.whoosh();
@@ -3805,7 +3965,7 @@ function updateHumanShots(dt){
     if(s.t){
       // follow the target: refresh its position from the creature or player it points at
       const t=s.t; if(t.kind==='ai'){t.x=t.e.x; t.y=t.e.y+t.e.size*0.55; t.z=t.e.z;} else if(t.kind==='me'){t.x=P.x; t.y=P.y+P.vis*0.5; t.z=P.z; t.r=P.vis*0.5;} else if(t.pe){t.x=t.pe.x; t.y=t.pe.y+t.pe.vis*0.55; t.z=t.pe.z;}
-      const dx=t.x-p.x,dy=t.y-p.y,dz=t.z-p.z,dl=Math.hypot(dx,dy,dz)||1,sp=Math.max(80,Math.hypot(s.vx,s.vy,s.vz)),k=damp(s.kind==='missile'?3:5,dt);
+      const dx=t.x-p.x,dy=t.y-p.y,dz=t.z-p.z,dl=Math.hypot(dx,dy,dz)||1,sp=Math.max(s.kind==='missile'?150:80,Math.hypot(s.vx,s.vy,s.vz)),k=damp(s.kind==='missile'?3:5,dt);
       s.vx=lerp(s.vx,dx/dl*sp,k); s.vy=lerp(s.vy,dy/dl*sp,k); s.vz=lerp(s.vz,dz/dl*sp,k);
     } else if(s.kind==='missile') s.vy-=30*dt;
     p.x+=s.vx*dt; p.y+=s.vy*dt; p.z+=s.vz*dt; s.g.lookAt(p.x+s.vx,p.y+s.vy,p.z+s.vz);
@@ -4026,7 +4186,7 @@ function updatePlayer(dt){
   // water: wading slows you, going under drains air
   const L=lakeAt(P.x,P.z),depth=L?L.wy-P.y:-1,inWater=depth>0.05;
   const slow=inWater?clamp(1-depth/(P.vis*1.1)*0.65,0.35,1):1;
-  const speed=(mods.speed?140:10*Math.pow(P.size,0.12))*slow*(charging>0?2.6:1)*(P.snareT>0?0.25:1)*(P.sleepT>0?0.55:1)*(P.legT>0?0.6:1)*(held?0.45:1);
+  const speed=(mods.speed?140:dinoSpeed())*slow*(charging>0?2.6:1)*(P.snareT>0?0.25:1)*(P.sleepT>0?0.55:1)*(P.legT>0?0.6:1)*(held?0.45:1);
   const sp=fwd>0?fwd*speed:fwd*speed*0.5;
   const tvx=Math.sin(P.h)*sp,tvz=Math.cos(P.h)*sp;
   const acc=P.onGround?9:2.5;
@@ -4110,7 +4270,7 @@ function updatePlayer(dt){
     if(P.biteT>0.15&&sp2<speed*0.25) an='Attack';
     playAnim(prig,an,0.15,an==='Attack'||an==='Jump');
     if(P.climbing){an='Walk'; playAnim(prig,an,0.15);}
-    if(prig.cur) prig.cur.timeScale=P.climbing?1.8:an==='Gallop'?clamp(sp2/(speed*0.8),0.7,1.8):an==='Walk'?clamp(sp2/(speed*0.35),0.6,1.6):1;
+    if(prig.cur) prig.cur.timeScale=P.climbing?1.8:an==='Gallop'?clamp(sp2/(speed*0.8)*Math.min(2.6,speed/(10*Math.pow(P.size,0.12))),0.7,2.6):an==='Walk'?clamp(sp2/(speed*0.35),0.6,1.6):1;
     prig.mixer.update(dt);
     const b=prig.bones,right=_rv.set(Math.cos(P.h),0,-Math.sin(P.h));
     // Godzilla mode stands the upper body up from the hips; biting and chewing bend the neck and head
@@ -4559,6 +4719,7 @@ function updateDriving(dt){
   const nx=P.x+Math.sin(P.h)*c.speed*dt,nz=P.z+Math.cos(P.h)*c.speed*dt,L=lakeAt(nx,nz);
   if(L&&L.wy-floorH(nx,nz)>1.0){c.speed=0; if(clock>tooDeepT){tooDeepT=clock+2; floatText('Too deep to drive!',P.x,P.y+3,P.z,'#9fdcff',20);}}
   else {
+    if(Math.abs(c.speed)>6) forEdiblesNear(nx,nz,12,f=>{if(f.fence&&f.alive&&rectDist(nx,nz,f.fr)<2.4){breakPart(f,true,0); c.speed*=0.8; carDamage(3);}});
     let o=collideObs(nx,nz,1.5,false); const ox=o.x,oz=o.z; o=collideBoxes(ox,oz,1.8,P.y+0.4,1.6,false); const bx=o.x,bz=o.z; o=collideWrecks(bx,bz,1.8,P.y);
     const want=Math.hypot(nx-P.x,nz-P.z),got=Math.hypot(o.x-P.x,o.z-P.z);
     if(want>0.05&&got<want*0.6&&Math.abs(c.speed)>8){carDamage(Math.abs(c.speed)*1.1); Snd.hit(); burst(o.x,P.y+1,o.z,'#d8d0b8',6,0.6,4,3); shake=Math.max(shake,0.15);}
@@ -4804,8 +4965,10 @@ function carMayhem(c){
   forEdiblesNear(P.x,P.z,8,o=>{if(o.alive&&!o.rect&&!o.road&&o.size<2.7&&o.top<12&&Math.hypot(o.x-P.x,o.z-P.z)<o.r+2.2&&sp>6){knockProp(o); c.speed*=0.85;}});
 }
 // a stray bullet at the reticle can hit a person or a car too
+// a bullet that lands on a base fence panel chips away at it
+function shootFence(x,y,z,dmg){forEdiblesNear(x,z,10,o=>{if(o.fence&&o.alive&&rectDist(x,z,o.fr)<1.2&&y<o.y1+0.3) hitPart(o,dmg,true);});}
 function hitThing(th,dmg,x,y,z){
-  if(!th) return;
+  if(!th){shootFence(x,y,z,dmg); return;}
   if(th.kind==='hm') killHuman(th.hm,'shot');
   else if(th.kind==='car'){const c=th.c; c.hp=(c.hp??40)-dmg; burst(x,y,z,'#ffd36a',3,0.4,3,2); if(c.hp<=0) explodeCar(c);}
 }
@@ -4840,7 +5003,8 @@ function airTargets(){
 }
 function pickAirTarget(){let best=null,bd=700; for(const t of airTargets()){const d=Math.hypot(t.x-P.x,t.y-P.y,t.z-P.z); if(d<bd){bd=d; best=t;}} return best;}
 function updateLock(){
-  const t=role==='dino'&&held&&!held.thrown&&state==='play'?pickAirTarget():null;
+  let t=role==='dino'&&held&&!held.thrown&&state==='play'?pickAirTarget():null;
+  if(role==='human'&&H.flying&&state==='play'&&P.alive){t=AIM.t||jetSeek(); const k=t?(t.e||t.pe):null; if(k&&k!==H.lockKey) Snd.lock(); H.lockKey=k;}
   if(!t){lockEl.hidden=true; return;}
   _av3.set(t.x,t.y,t.z).project(camera); if(_av3.z>1){lockEl.hidden=true; return;}
   lockEl.hidden=false; lockEl.style.transform=`translate(${(_av3.x*0.5+0.5)*innerWidth-32}px,${(-_av3.y*0.5+0.5)*innerHeight-32}px)`;
@@ -4902,6 +5066,7 @@ const mmBg=document.createElement('canvas'); mmBg.width=mmEl.width; mmBg.height=
     else if(nearRoad(x,z,1)) c=[58,60,66];
     else if(inRect(x,z,SUB)) c=[118,150,96];
     else if(inRect(x,z,PLANT)) c=[170,168,160];
+    else if(Math.abs(x-CASTLE.x)<56&&Math.abs(z-CASTLE.z)<56) c=[176,168,150];
     else if(inRect(x,z,BASE)) c=[140,132,92];
     else if(oceanT(x,z)>0.05&&h<SEA_Y+3.4) c=[227,205,142];
     else if(landOut(x,z)>4) c=h>70?[232,236,240]:[112,114,102];
