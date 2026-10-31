@@ -352,6 +352,32 @@ canvas{display:block;touch-action:none;outline:none;}
 .hpbar i{display:block;height:100%;width:100%;background:linear-gradient(#9dff7a,#3fbf3a);}
 .hpbar.low i{background:linear-gradient(#ff8a6a,#d8321e);}
 .hpbar.angry{border-color:#ffd23f;box-shadow:0 0 8px #ff3b30;}
+
+/* front screen, update 22 */
+#title .tleft{gap:12px;padding-block:24px;max-height:100%;overflow-y:auto;justify-content:safe center;}
+#title .tleft .logo{font-size:clamp(46px,9.5vh,96px);animation:logoBob 3.4s ease-in-out infinite;}
+@keyframes logoBob{50%{transform:rotate(-2deg) translateY(-5px) scale(1.015);}}
+#title .tag{font-size:16px;color:#ffe9b0;margin:0;}
+.tbadges{display:flex;gap:8px;flex-wrap:wrap;}
+.tbadges span{padding:4px 11px;border-radius:999px;background:rgba(255,201,63,.12);border:1px solid rgba(255,201,63,.4);font:900 10.5px var(--body);letter-spacing:.16em;color:var(--gold);}
+#title .card .av{aspect-ratio:auto;height:clamp(84px,16vh,132px);overflow:hidden;}
+#title .card .av img{height:100%;width:auto;max-width:94%;}
+#title .card .cd2{font-size:12px;}
+.playrow{display:grid;grid-template-columns:1.55fr 1fr;gap:12px;}
+.playrow .btn{width:100%;margin:0;}
+.btn.play{font-size:36px;animation:playPulse 1.8s ease-in-out infinite;}
+@keyframes playPulse{50%{filter:brightness(1.13) saturate(1.1);}}
+#tutBtn{display:grid;place-items:center;align-content:center;gap:4px;font-size:26px;padding:10px 8px;line-height:1;background:linear-gradient(180deg,#8fdcff,#2f8fe0);color:#062641;}
+#tutBtn small{font:900 10.5px var(--body);letter-spacing:.16em;opacity:.85;}
+#tutBtn:hover,.btn.play:hover{filter:brightness(1.18);}
+#whatsnew{position:absolute;right:28px;bottom:28px;width:310px;padding:16px 18px 18px;border-radius:16px;border-color:rgba(255,201,63,.5);box-shadow:0 18px 40px rgba(0,0,0,.4);}
+#whatsnew h3{margin:0 0 10px;font:400 24px var(--display);color:var(--gold);letter-spacing:.03em;}
+#whatsnew .ver{position:absolute;top:16px;right:16px;font:900 10px var(--body);letter-spacing:.16em;color:var(--ink-dim);}
+#whatsnew ul{margin:0;padding:0;list-style:none;display:grid;gap:8px;}
+#whatsnew li{display:flex;align-items:center;gap:10px;font:800 13.5px var(--body);color:var(--ink);}
+#whatsnew li b{display:inline-grid;place-items:center;flex:none;width:26px;height:26px;border-radius:8px;background:rgba(255,201,63,.18);color:var(--gold);font:900 13px var(--body);}
+@media (max-width:980px){#whatsnew{display:none;}}
+@media (max-height:720px){#title .card .cd2{display:none;} #title .card .av{height:76px;}}
 </style>
 
 <div id="app"></div>
@@ -393,17 +419,18 @@ canvas{display:block;touch-action:none;outline:none;}
   <div class="tleft">
     <h1 class="logo">Dino<span>Muncher</span></h1>
     <p class="tag">Pick a side. Eat the city, or save it.</p>
+    <div class="tbadges"><span>MULTIPLAYER</span><span>FREE</span><span>NO DOWNLOAD</span></div>
     <div class="cards" role="group" aria-label="Choose your side">
       <button class="card dino" type="button" data-role="dino" aria-pressed="true"><span class="av"><img data-av="dino" alt=""></span><span class="ct">Dinosaur</span><span class="cd2">Eat everything, grow huge, wreck the cities and fight other dinos.</span></button>
       <button class="card human" type="button" data-role="human" aria-pressed="false"><span class="av"><img data-av="human" alt=""></span><span class="ct">Human</span><span class="cd2">Start as a cop in a squad car. Rank up to soldier, then pilot. Hunt dinos.</span></button>
     </div>
     <div class="field"><label for="nick">YOUR NAME</label><input id="nick" maxlength="14" autocomplete="off" spellcheck="false"></div>
     <div class="field" id="skinField"><label>DINO COLOUR</label><div id="skins"></div></div>
-    <button class="btn big play" id="joinBtn">Play</button>
+    <div class="playrow"><button class="btn big play" id="joinBtn">Play</button><button class="btn big" id="tutBtn" type="button">Tutorial<small>NEW? START HERE</small></button></div>
     <p class="srv"><i></i>Joins a random open server · up to 8 players</p>
-    <button class="linkbtn" id="tutBtn" type="button">New here? Play the tutorial</button>
     <p class="credits">Jet: <a href="https://skfb.ly/oUBCR" target="_blank" rel="noopener">"Low poly F14 Tomcat"</a> by SIpriv, <a href="http://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>
   </div>
+  <aside id="whatsnew" class="glass"><span class="ver">UPDATE 22</span><h3>What's new</h3><ul><li><b>?</b>Mystery power-up boxes</li><li><b>T</b>Drive tanks, fly fighter jets</li><li><b>!</b>Smashable missile launchers</li><li><b>Q</b>Earthquakes and tail whips</li><li><b>♪</b>Background music and police sirens</li></ul></aside>
 </div>
 
 <div id="menu" class="overlay" hidden>
@@ -901,7 +928,7 @@ const SPECIES=[
   {id:'king',dino:true,name:'Dino King',model:'Trex',tint:{body:'#4a2f7a',belly:'#d9b84a'},size:18,count:1,speed:3.0,aggro:34,chase:15,dmg:48,color:'#5a3a8f',build:()=>buildRex(KING_LOOK)},
 ];
 // dinos are slower than people: a baby is slower than a cop on foot, a World Eater slower than a police car
-const dinoSpeed=()=>12.35+35.1*clamp(Math.log(Math.max(1,P.size))/Math.log(70),0,1);
+const dinoSpeed=()=>61.75+175.5*clamp(Math.log(Math.max(1,P.size))/Math.log(70),0,1);
 // dinos are 2.5x as tough as they used to be, so humans have to work for a kill
 const DINO_HP=250;
 // more forest critters (unit size, facing +z, feet at y=0)
@@ -1016,7 +1043,7 @@ for(let iz=0;iz<GH;iz++) for(let ix=0;ix<GW;ix++){const x=OX+ix*CS,z=OZ+iz*CS; H
 // elevated highways on pillars tying the cities, the suburbs, the power plant and the base together;
 // they ramp down to street level at each end, and only the ramps press into the ground
 // only a Tyrant Rex or bigger can smash a freeway; smaller dinos walk on it
-const RW=8,ELEV=13,ROAD_BREAK=11.5,roadRoutes=[],roadGrid=new Map();
+const RW=8,ELEV=13,ROAD_BREAK=11.5,BIG_PASS=7,roadRoutes=[],roadGrid=new Map();
 {
   const hRaw=new Float32Array(GW*GH),wRaw=new Float32Array(GW*GH),cap=new Float32Array(GW*GH).fill(1e9);
   // round off the bends (Chaikin) so the highway curves instead of kinking
@@ -1232,6 +1259,8 @@ function collideBoxes(x,z,r,feet,height,isPlayer=false){
     const list=boxGrid.get(Math.floor(x/BCELL)*4096+Math.floor(z/BCELL)); if(!list) break;
     for(const b of list){
       if(b.dead||feet>=b.y1-0.45||feet+height<b.y0) continue;
+      // a big dino only bumps into buildings; it ploughs through walls, fences and props
+      if(isPlayer&&role==='dino'&&P.size>=BIG_PASS&&!(b.obj&&b.obj.rect)) continue;
       if(isPlayer&&b.obj&&canEatSize(b.obj.size)&&!b.obj.rect&&!b.obj.breakable) continue;
       const cx=clamp(x,b.x0,b.x1),cz=clamp(z,b.z0,b.z1),dx=x-cx,dz=z-cz,d2=dx*dx+dz*dz;
       if(d2<r*r){
@@ -1262,6 +1291,7 @@ function jspot(clear=10,minH=-99,sep=0){
 const LEAF=['#24702f','#2e8239','#38923f','#226a2c','#41a046','#317f32'];
 // tall broadleaf jungle tree with side branches
 function jungleTree(x,z){
+  if(cityAt(x,z,4)) return;
   const y=groundH(x,z)-0.4,h=R(18,32),s=R(1.2,1.9),tc=pick(['#7a4e2e','#6b4428','#84572f']);
   beginObj(x,z,{size:h*0.22*Math.sqrt(s),r:1.5*s,top:h+5*s,color:pick(LEAF),regrow:true});
   const b=B(x,z);
@@ -1297,6 +1327,7 @@ function conifer(x,z){
   addObs(x,z,0.45*s); endObj();
 }
 function birch(x,z){
+  if(cityAt(x,z,4)) return;
   const y=groundH(x,z)-0.2,h=R(12,20),s=R(0.8,1.1);
   beginObj(x,z,{size:h*0.2,r:1.1*s,top:h+3,color:'#7cc04a',regrow:true});
   const b=B(x,z); b.push(Q(G.cyl6,'#e8e4da',x,y+h/2,z,0.55*s,h,0.55*s,0,R(0,6),0,0.04));
@@ -1316,6 +1347,7 @@ function bamboo(x,z){
   addObs(x,z,1.2); endObj();
 }
 function bushTree(x,z){
+  if(cityAt(x,z,4)) return;
   const y=groundH(x,z)-0.2,h=R(4,6.5);
   beginObj(x,z,{size:h*0.3,r:1.6,top:h+2,color:'#3a9a42',regrow:true});
   const b=B(x,z); b.push(Q(G.taper,'#6b4428',x,y+h/2,z,0.45,h,0.45));
@@ -1372,6 +1404,7 @@ function log(x,z){
 // ancient giant trees: far too big to eat, but solid enough to climb
 const giants=[];
 function giantTree(x,z){
+  if(cityAt(x,z,4)) return;
   if(nearRoad(x,z,32)||inRect(x,z,SUB,12)||inRect(x,z,PLANT,12)||Math.hypot(x-CASTLE.x,z-CASTLE.z)<CASTLE.r+260) return;
   const y=groundH(x,z)-1.5,h=R(150,215),r=R(8,11),tc=pick(['#6b4428','#5e3c22','#7a4e2e']),b=B(x,z);
   b.push(Q(G.taper,tc,x,y+h/2,z,r*2,h,r*2,0,R(0,6),0,0.04));
@@ -1651,14 +1684,14 @@ function buildCity(C){
       for(let k=0;k<9;k++){
         const tx=R(x0+3,x1-3),tz=R(z0+3,z1-3); if(Math.abs(tx-cx)<2.5||Math.abs(tz-cz)<2.5) continue;
         const h=R(4,7);
-        smallProp(tx,tz,h*0.3,h+3,'#2e8239',bb=>{bb.push(Q(G.taper,'#6b4428',tx,CY+h/2,tz,0.5,h,0.5)); for(let q=0;q<3;q++) bb.push(Q(G.ico1,pick(LEAF),tx+R(-1,1),CY+h+R(-0.5,1),tz+R(-1,1),R(3,4.2),R(2.4,3.2),R(3,4.2))); addObs(tx,tz,0.35);});
+        if(0) smallProp(tx,tz,h*0.3,h+3,'#2e8239',bb=>{bb.push(Q(G.taper,'#6b4428',tx,CY+h/2,tz,0.5,h,0.5)); for(let q=0;q<3;q++) bb.push(Q(G.ico1,pick(LEAF),tx+R(-1,1),CY+h+R(-0.5,1),tz+R(-1,1),R(3,4.2),R(2.4,3.2),R(3,4.2))); addObs(tx,tz,0.35);});
       }
       for(let k=0;k<4;k++){const bx=cx+R(-12,12); smallProp(bx,cz+1.9,0.6,1.5,'#6b4a2e',bb=>{bb.push(Q(G.box,'#6b4a2e',bx,CY+0.85,cz+1.8,2.2,0.12,0.6)); bb.push(Q(G.box,'#6b4a2e',bx,CY+1.2,cz+2.05,2.2,0.6,0.12));});}
       if(j===3) b.push(Q(G.box,'#2f9fd8',cx+12,CY+0.38,cz-8,10,0.1,7,0,0,0,0.02));
       continue;
     }
     for(let x=x0+5;x<x1-4;x+=R(10,16)){
-      if(rand()<0.5){const tx=x,tz=z0+1.3; smallProp(tx,tz,1.2,4.8,'#2e8239',bb=>{bb.push(Q(G.cyl6,'#6b4a2e',tx,CY+1.6,tz,0.25,2.6,0.25)); bb.push(Q(G.ico1,pick(LEAF),tx,CY+3.6,tz,2.4,2,2.4)); addObs(tx,tz,0.3);});}
+      if(rand()<0.5&&0){const tx=x,tz=z0+1.3; smallProp(tx,tz,1.2,4.8,'#2e8239',bb=>{bb.push(Q(G.cyl6,'#6b4a2e',tx,CY+1.6,tz,0.25,2.6,0.25)); bb.push(Q(G.ico1,pick(LEAF),tx,CY+3.6,tz,2.4,2,2.4)); addObs(tx,tz,0.3);});}
     }
     if(rand()<0.6) smallProp(x0+1.2,z1-1.2,0.4,1,'#d33a2c',bb=>bb.push(Q(G.cyl8,'#d33a2c',x0+1.2,CY+0.6,z1-1.2,0.35,0.8,0.35)));
     const nx=rand()<0.4?2:3,nz=rand()<0.5?1:2;
@@ -4557,16 +4590,16 @@ function updatePlayer(dt){
   // water: wading slows you, going under drains air
   const L=lakeAt(P.x,P.z),depth=L?L.wy-P.y:-1,inWater=depth>0.05;
   const slow=inWater?clamp(1-depth/(P.vis*1.1)*0.65,0.35,1):1;
-  const speed=(mods.speed?140:dinoSpeed()*(clock<(P.puSpeedT||0)?1.6:1))*slow*(charging>0?2.6:1)*(P.snareT>0?0.25:1)*(P.sleepT>0?0.55:1)*(P.legT>0?0.6:1)*(held?0.45:1);
+  const speed=(mods.speed?700:dinoSpeed()*(clock<(P.puSpeedT||0)?1.6:1))*slow*(charging>0?2.6:1)*(P.snareT>0?0.25:1)*(P.sleepT>0?0.55:1)*(P.legT>0?0.6:1)*(held?0.45:1);
   const sp=fwd>0?fwd*speed:fwd*speed*0.5;
   const tvx=Math.sin(P.h)*sp,tvz=Math.cos(P.h)*sp;
   const acc=P.onGround?9:2.5;
   P.vx=lerp(P.vx,tvx,damp(acc,dt)); P.vz=lerp(P.vz,tvz,damp(acc,dt));
   const ox0=P.x,oz0=P.z;
   P.x+=P.vx*dt; P.z+=P.vz*dt; wallSlide(ox0,oz0);
-  if(P.size<PICKY_SIZE){const o=collideObs(P.x,P.z,P.vis*0.32,true); P.x=o.x; P.z=o.z;}
+  if(P.size<BIG_PASS){const o=collideObs(P.x,P.z,P.vis*0.32,true); P.x=o.x; P.z=o.z;}
   // a dino too small to smash the freeway can't walk through its deck either
-  if(P.size<ROAD_BREAK&&deckBlocks(P.x,P.z,P.y,P.vis*1.25)){if(!deckBlocks(P.x-P.vx*dt,P.z,P.y,P.vis*1.25)) P.x-=P.vx*dt; else if(!deckBlocks(P.x,P.z-P.vz*dt,P.y,P.vis*1.25)) P.z-=P.vz*dt; else {P.x-=P.vx*dt; P.z-=P.vz*dt;}}
+  if(P.size<BIG_PASS&&deckBlocks(P.x,P.z,P.y,P.vis*1.25)){if(!deckBlocks(P.x-P.vx*dt,P.z,P.y,P.vis*1.25)) P.x-=P.vx*dt; else if(!deckBlocks(P.x,P.z-P.vz*dt,P.y,P.vis*1.25)) P.z-=P.vz*dt; else {P.x-=P.vx*dt; P.z-=P.vz*dt;}}
   const wantX=P.x,wantZ=P.z; hitTop=-1e9;
   {const o=collideBoxes(P.x,P.z,P.vis*0.38,P.y,P.vis*1.2,true); P.x=o.x; P.z=o.z;}
   {const o=collideWrecks(P.x,P.z,P.vis*0.38,P.y); P.x=o.x; P.z=o.z;}
@@ -4931,7 +4964,8 @@ function updateHUD(dt){
   {const gb=$('gunbar'); gb.hidden=!(role==='human'&&state==='play'&&P.alive&&!H.flying&&!(H.inCar&&H.car&&H.car.tank));}
   $('bitePrompt').hidden=!(role==='dino'&&P.alive&&P.size>=CLICK_EAT_SIZE&&P.wantSeen&&!P.chew);
   const al=A.army?'army':A.police?'police':A.animalOn?'animal':null;
-  if(al){alertEl.hidden=false; alertEl.className='glass '+al; $('alertTxt').textContent={army:'MILITARY',police:'POLICE',animal:'ANIMAL CONTROL'}[al]; $('stars').textContent=al==='police'?'★'.repeat(A.wanted)+'☆'.repeat(5-A.wanted):'';}
+  if(al){alertEl.hidden=false; alertEl.className='glass '+al; $('alertTxt').textContent={army:'MILITARY',police:'POLICE',animal:'ANIMAL CONTROL'}[al]; $('stars').textContent=al==='police'?'★'.repeat(A.wanted)+'☆'.repeat(5-A.wanted):'';
+    if(role==='human'&&H.wantedT>0){const w=Math.ceil(H.wantedT); $('alertTxt').textContent='WANTED '+Math.floor(w/60)+':'+String(w%60).padStart(2,'0');}}
   else alertEl.hidden=true;
   const angry=role==='human'&&P.alive&&creatures.some(e=>e.alive&&e.angryT>clock&&e.d<70);
   sirenEdgeEl.className=P.alive&&state==='play'&&(angry||al)?'on '+(angry?'dino':al):'';
@@ -5076,7 +5110,7 @@ function fireGun(manual){
 }
 
 /* ================= the human's police car: spawn in it, drive anywhere ================= */
-function ensureCar(){if(H.car&&H.car.tank) releaseTank(); if(!H.car){const r=buildCar('police'); scene.add(r.root); H.car={rig:r,speed:0,x:P.x,z:P.z,h:P.h,hp:100};} return H.car;}
+function ensureCar(){if(H.car&&H.car.tank) releaseTank(); if(!H.car){const r=buildCar('police'); scene.add(r.root); H.car={rig:r,speed:0,x:P.x,z:P.z,h:P.h,hp:100,police:true};} return H.car;}
 function enterCar(){const c=ensureCar(); H.inCar=true; c.speed=0; P.x=c.x; P.z=c.z; P.h=c.h; c.rig.root.visible=true; if(H.rig) H.rig.root.visible=false;}
 function exitCar(){
   const c=H.car; H.inCar=false; c.speed=0;
@@ -5117,22 +5151,22 @@ function renderGunBar(){
 function civilianKilled(){
   if(tutorial) return;
   H.civHits=(H.civHits||[]).filter(t=>clock-t<90); H.civHits.push(clock);
-  if(H.wantedT>0) H.wantedT=Math.min(120,H.wantedT+20);
-  else if(H.civHits.length>=3) H.wantedT=60;
+  if(H.wantedT>0) H.wantedT=120;
+  else if(H.civHits.length>=3) H.wantedT=120;
   else floatText(`Careful! ${3-H.civHits.length} more and the police turn on you`,P.x,P.y+3,P.z,'#ff8a6a',18);
 }
 function updateWanted(dt){
   const alive=state==='play'&&P.alive;
   H.wantedT=Math.max(0,(H.wantedT||0)-dt);
   Object.assign(A,{army:false,armyHunt:false,cityHeat:0,cityTime:0,baseHeat:0});
-  const rogue=alive&&H.rogueT>clock,air=alive&&H.flying&&inRect(P.x,P.z,BASE,160);
-  A.army=rogue||air; A.armyHunt=rogue;
-  if(air&&!A.wasAir) bigAlert('army','RESTRICTED AIRSPACE','The army base is shooting at you! Fly away'); A.wasAir=air;
+  const rogue=alive&&H.rogueT>clock,crim=rogue||(alive&&H.wantedT>0),near=inRect(P.x,P.z,BASE,160),air=crim&&H.flying&&near;
+  A.army=rogue||(crim&&near); A.armyHunt=rogue;
+  if(crim&&near&&!A.wasAir) bigAlert('army','THE BASE IS FIRING!','You are wanted, so the army treats you as an enemy'); A.wasAir=crim&&near;
   if(!rogue&&A.wasRogue&&alive) banner('The military stopped hunting you',2000); A.wasRogue=rogue;
   if(rogue){A.jetT=(A.jetT===undefined?8:A.jetT)-dt; if(A.jetT<=0&&jets.length<2){A.jetT=RR(15,25); spawnJet();}
     A.armyT=(A.armyT||0)-dt; let sol=0; for(const h of humans) if(h.kind==='soldier'&&h.temp&&h.alive) sol++; if(A.armyT<=0&&sol<12){A.armyT=RR(8,12); dispatchResponder('army');}}
   A.police=alive&&(H.wantedT>0||rogue); A.wanted=A.police?(rogue?5:3):0;
-  if(A.police&&!A.wasPolice&&!rogue) bigAlert('police','WANTED!','The police are after you for killing civilians');
+  if(A.police&&!A.wasPolice&&!rogue) bigAlert('police','WANTED!','You killed civilians. The police and the army base are after you for 2 minutes');
   else if(!A.police&&A.wasPolice&&alive) banner('The police gave up the chase',1800);
   A.wasPolice=A.police; A.wasArmy=false; A.wasHunt=false;
   if(!A.police) return;
@@ -5600,13 +5634,14 @@ function wrecked(o){
 /* ================= the dark green walls round the map edge, and cliffs too steep to climb, are solid ================= */
 function wallBlocked(x0,z0,x1,z1){
   if(tutorial) return false;
-  {const s1=deckSide(x1,z1,P.y); if(s1>=RW-0.9&&s1<1e8&&deckSide(x0,z0,P.y)<RW-0.9) return true;}
+  const big=role==='dino'&&P.size>=BIG_PASS;
+  if(!big){const s1=deckSide(x1,z1,P.y); if(s1>=RW-0.9&&s1<1e8&&deckSide(x0,z0,P.y)<RW-0.9) return true;}
   if(deckTop(x1,z1,P.y)>-1e8) return false;
   if(mtnHit(x1,z1,P.y,P.vis*0.3)&&!mtnHit(x0,z0,P.y,P.vis*0.3)) return true;
   const e1=landOut(x1,z1); if(e1>2&&e1>landOut(x0,z0)+0.01) return true;
   const dx=x1-x0,dz=z1-z0,d=Math.hypot(dx,dz); if(d<1e-4) return false;
   const h0=groundH(x0,z0); if(groundH(x1,z1)<=h0) return false;
-  return groundH(x0+dx/d*4,z0+dz/d*4)-h0>3.6+P.vis*0.2;
+  return !big&&groundH(x0+dx/d*4,z0+dz/d*4)-h0>3.6+P.vis*0.2;
 }
 function wallSlide(ox,oz){
   if(!wallBlocked(ox,oz,P.x,P.z)) return;
@@ -5822,7 +5857,7 @@ function takeCar(c){
   if(H.car&&H.car.tank) releaseTank();
   if(H.car) scene.remove(H.car.rig.root);
   const r=buildCar(c.kind); scene.add(r.root);
-  H.car={rig:r,speed:0,x:c.x,z:c.z,h:c.h,hp:100};
+  H.car={rig:r,speed:0,x:c.x,z:c.z,h:c.h,hp:100,police:c.kind==='police'};
   c.alive=false; c.eatenT=-1; c.rig.root.visible=false; c.respawn=RR(15,25);
   enterCar(); floatText(c.kind==='police'?'Took a police car!':'Carjacked!',P.x,P.y+3,P.z,'#e2ff6a',20);
 }
@@ -5898,7 +5933,7 @@ function humanWrecked(){
   else if(H.wreckLog.length>=4){H.rogueT=clock+90; bigAlert('army','YOU ARE A TARGET!','You blew up too many buildings. The police and the military are hunting you');}
   else if(H.wreckLog.length>=2) floatText(`Careful! ${4-H.wreckLog.length} more buildings and the army comes for you`,P.x,P.y+3,P.z,'#ff8a6a',18);
 }
-const humanHunted=()=>role==='human'&&!tutorial&&state==='play'&&P.alive&&(H.rogueT>clock||(H.flying&&inRect(P.x,P.z,BASE,160)));
+const humanHunted=()=>role==='human'&&!tutorial&&state==='play'&&P.alive&&(H.rogueT>clock||(H.wantedT>0&&inRect(P.x,P.z,BASE,160)));
 
 /* ================= jets: crashing into a dino takes 500 health off it ================= */
 function jetRam(){
@@ -6012,6 +6047,46 @@ function updatePowerups(dt){
   $('puArrow').style.transform=`translate(-50%,-50%) rotate(${Math.atan2(-y,x)}rad) translateX(26px)`;
   $('puDist').textContent=`${Math.round(Math.hypot(P.x-b.x,P.z-b.z))} m · ${Math.ceil(PU.at+PU_LIFE-now)}s`;
 }
+
+/* ================= background music: a slow generated ambient loop with a little wind ================= */
+const Music={g:null,wind:null,windF:null,next:0,step:0,
+  // A minor, F, C, G: two bars each, two seconds a bar
+  CH:[[57,60,64,69],[53,57,60,65],[48,55,60,64],[55,59,62,67]],
+  start(){
+    const c=Snd.ctx; this.g=c.createGain(); this.g.gain.value=0;
+    const lp=c.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=2200;
+    const dl=c.createDelay(1.5),fb=c.createGain(); dl.delayTime.value=0.45; fb.gain.value=0.32;
+    this.g.connect(lp); lp.connect(Snd.master); lp.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(Snd.master);
+    const n=c.createBufferSource(); n.buffer=Snd.nb; n.loop=true;
+    this.windF=c.createBiquadFilter(); this.windF.type='bandpass'; this.windF.frequency.value=420; this.windF.Q.value=0.7;
+    this.wind=c.createGain(); this.wind.gain.value=0; n.connect(this.windF); this.windF.connect(this.wind); this.wind.connect(this.g); n.start();
+    this.next=c.currentTime+0.3;
+  },
+  hz:m=>440*Math.pow(2,(m-69)/12),
+  pad(m,T,dur){
+    const c=Snd.ctx,g=c.createGain(); g.gain.setValueAtTime(0,T); g.gain.linearRampToValueAtTime(0.028,T+1.4); g.gain.setValueAtTime(0.028,T+dur-1.6); g.gain.linearRampToValueAtTime(0,T+dur); g.connect(this.g);
+    for(const [type,det] of [['sine',-4],['triangle',5]]){const o=c.createOscillator(); o.type=type; o.frequency.value=this.hz(m); o.detune.value=det; o.connect(g); o.start(T); o.stop(T+dur+0.05);}
+  },
+  pluck(m,T){
+    const c=Snd.ctx,g=c.createGain(),o=c.createOscillator(); o.type='triangle'; o.frequency.value=this.hz(m);
+    g.gain.setValueAtTime(0,T); g.gain.linearRampToValueAtTime(0.03,T+0.02); g.gain.exponentialRampToValueAtTime(0.0008,T+1.1);
+    o.connect(g); g.connect(this.g); o.start(T); o.stop(T+1.2);
+  },
+  update(){
+    if(!Snd.ctx||Snd.ctx.state!=='running') return;
+    if(!this.g) this.start();
+    const c=Snd.ctx,t=c.currentTime;
+    this.g.gain.setTargetAtTime(Snd.muted?0:(state==='menu'?0.6:0.4),t,0.8);
+    const high=state==='play'?clamp((P.y-20)/120,0,1):0;
+    this.wind.gain.setTargetAtTime(0.05+high*0.12,t,1.5); this.windF.frequency.setTargetAtTime(380+160*Math.sin(t*0.11),t,1);
+    while(this.next<t+0.6){
+      const bar=this.step++,ch=this.CH[Math.floor(bar/2)%4],T=this.next;
+      if(bar%2===0){for(const m of ch) this.pad(m-12,T,4.2); this.pad(ch[0]-24,T,4.2);}
+      for(let k=0;k<4;k++) if(hash2(bar*1.31,k*7.17)<0.4) this.pluck(ch[Math.floor(hash2(bar*0.77,k*3.3)*4)]+12,T+k*0.5);
+      this.next+=2;
+    }
+  }
+};
 
 /* ================= tutorial island ================= */
 const tutEl=$('tut'),tutEndEl=$('tutEnd');
@@ -6197,7 +6272,8 @@ function tick(dt){
   updateHpBars();
   if(steamVents.length&&Math.random()<dt*14){const v=pickM(steamVents); if(v.obj.alive&&Math.hypot(v.x-camera.position.x,v.z-camera.position.z)<900) burst(v.x+RR(-v.r,v.r)*0.6,v.y,v.z+RR(-v.r,v.r)*0.6,'#f4f4f4',1,RR(10,16),1.5,5,-1.2);}
   sendPresence(false);
-  Snd.sirenUpdate(A.police,clock);
+  Snd.sirenUpdate(A.police||(role==='human'&&state==='play'&&P.alive&&H.inCar&&!!H.car&&!!H.car.police),clock);
+  Music.update();
   flash=Math.max(0,flash-dt*2.4); vignette.style.opacity=String(Math.max(flash,state==='play'&&P.hp<P.maxHp*0.3?0.3+Math.sin(clock*6)*0.12:0));
   for(const w of waters){const a=w.g.attributes.position,b=w.base; for(let i=0;i<a.count;i++) a.array[i*3+1]=Math.sin(b[i*3]*0.3+clock*1.5)*0.16+Math.cos(b[i*3+2]*0.36+clock*1.1)*0.16; a.needsUpdate=true; w.g.computeVertexNormals();}
   for(const r of radars) r.rotation.y+=dt*1.2;
