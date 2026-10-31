@@ -928,7 +928,7 @@ const SPECIES=[
   {id:'king',dino:true,name:'Dino King',model:'Trex',tint:{body:'#4a2f7a',belly:'#d9b84a'},size:18,count:1,speed:3.0,aggro:34,chase:15,dmg:48,color:'#5a3a8f',build:()=>buildRex(KING_LOOK)},
 ];
 // dinos are slower than people: a baby is slower than a cop on foot, a World Eater slower than a police car
-const dinoSpeed=()=>3.3+66*Math.pow(clamp(Math.log(Math.max(1,P.size))/Math.log(70),0,1),1.3);
+const dinoSpeed=()=>3.96+79.2*Math.pow(clamp(Math.log(Math.max(1,P.size))/Math.log(70),0,1),1.3);
 // dinos are 2.5x as tough as they used to be, so humans have to work for a kill
 const DINO_HP=250;
 // more forest critters (unit size, facing +z, feet at y=0)
@@ -1261,7 +1261,7 @@ function collideBoxes(x,z,r,feet,height,isPlayer=false){
     for(const b of list){
       if(b.dead||feet>=b.y1-0.45||feet+height<b.y0) continue;
       // a big dino only bumps into buildings; it ploughs through walls, fences and props
-      if(isPlayer&&role==='dino'&&P.size>=BIG_PASS&&(!(b.obj&&b.obj.rect)||b.y1-feet<P.vis*1.3)) continue;
+      if(isPlayer&&role==='dino'&&P.size>=BIG_PASS&&(!(b.obj&&b.obj.rect)||b.y1-feet<P.vis*0.75)) continue;
       if(isPlayer&&b.obj&&canEatSize(b.obj.size)&&!b.obj.rect&&!b.obj.breakable) continue;
       const cx=clamp(x,b.x0,b.x1),cz=clamp(z,b.z0,b.z1),dx=x-cx,dz=z-cz,d2=dx*dx+dz*dz;
       if(d2<r*r){
@@ -4609,7 +4609,7 @@ function updatePlayer(dt){
   const wantX=P.x,wantZ=P.z; hitTop=-1e9;
   {const o=collideBoxes(P.x,P.z,P.vis*0.38,P.y,P.vis*1.2,true); P.x=o.x; P.z=o.z;}
   {const o=collideWrecks(P.x,P.z,P.vis*0.38,P.y); P.x=o.x; P.z=o.z;}
-  ramBoats();
+  ramBoats(); crushUnderfoot(dt);
   // low ledges are stepped up onto; walls are climbed while you keep walking into them
   const rise=hitTop-P.y,stepH=P.size>=BIG_PASS?P.vis*0.7:Math.min(P.vis*0.5+0.3,2.5+P.vis*0.08);
   if(hitTop>-1e8&&rise<stepH&&!P.climbing){P.y=hitTop+0.02; P.vy=0; P.x=wantX; P.z=wantZ; P.onGround=true;}
@@ -6116,6 +6116,38 @@ const Music={g:null,wind:null,windF:null,next:0,step:0,
 for(const o of edibles){
   if(!o.alive||o.castle||o.road||!castleBack(o.x,o.z,4)) continue;
   o.alive=false; o.regrow=false; o.banned=true; hideObj(o); for(const b of o.boxes) b.dead=true; for(const ob of o.obs) ob.dead=true;
+}
+
+/* ================= stomping: anything tiny next to the dino is crushed underfoot ================= */
+// "tiny" scales with the dino: anything under about a quarter of its size, inside its footprint
+function crushUnderfoot(dt){
+  if(role!=='dino'||tutorial||!P.alive||state!=='play'||P.size<2||!P.onGround||Math.hypot(P.vx,P.vz)<1) return;
+  P.crushT=(P.crushT||0)-dt; if(P.crushT>0) return; P.crushT=0.1;
+  const lim=P.size*0.25,r=P.vis*0.5,fx=P.x+Math.sin(P.h)*P.vis*0.25,fz=P.z+Math.cos(P.h)*P.vis*0.25;
+  const near=(x,z,extra=0)=>Math.hypot(x-fx,z-fz)<r+extra;
+  let n=0,pts=0;
+  for(const e of creatures){
+    if(!e.alive||e.tut||e.size>=lim||!near(e.x,e.z,e.size*0.3)) continue;
+    e.alive=false; e.eatenT=-1; e.rig.root.visible=false; e.respawn=RR(10,20);
+    pts+=rewardKill(e.size,e.x,e.y+e.size*0.3,e.z,e.spec.plant?'#4f9a3a':pickM(BLOOD),0.12); n++;
+  }
+  for(const hm of humans){
+    if(!hm.alive||hm.gainSize>=lim||!near(hm.x,hm.z,0.5)) continue;
+    hm.alive=false; hm.eatenT=-1; hm.rig.root.visible=false; hm.respawn=RR(8,16);
+    pts+=rewardKill(hm.gainSize,hm.x,hm.y+0.5,hm.z,pickM(BLOOD),0.12); n++;
+  }
+  for(const c of cars){
+    if(!c.alive||c.gainSize>=lim||!near(c.x,c.z,1.5)) continue;
+    c.alive=false; c.eatenT=-1; c.rig.root.visible=false; c.respawn=RR(8,15);
+    pts+=rewardKill(c.gainSize,c.x,c.y+0.6,c.z,'#9aa0a6',0.12); chunks(c.x,c.y+0.8,c.z,['#d33a2c','#2a2a2e','#9aa0a6'],6,0.5,1.4,1); n++;
+  }
+  forEdiblesNear(fx,fz,r+12,o=>{
+    if(!o.alive||o.rect||o.breakable||o.road||o.boat||o.fence||o.banned||o.size>=lim||!near(o.x,o.z,o.r)) return;
+    pts+=destroyStatic(o); n++;
+  });
+  if(!n) return;
+  if(clock>(P.crushTxt||0)){P.crushTxt=clock+0.35; floatText((n>1?n+'x ':'')+'CRUSH! +'+pts,P.x,P.y+P.vis*1.6,P.z,'#ffd23f',22);}
+  shake=Math.max(shake,Math.min(0.25,0.05+P.size*0.004)); Snd.crumble(clamp(0.25+n*0.1,0.25,0.7)); checkStage();
 }
 /* ================= tutorial island ================= */
 const tutEl=$('tut'),tutEndEl=$('tutEnd');
