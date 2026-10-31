@@ -928,7 +928,7 @@ const SPECIES=[
   {id:'king',dino:true,name:'Dino King',model:'Trex',tint:{body:'#4a2f7a',belly:'#d9b84a'},size:18,count:1,speed:3.0,aggro:34,chase:15,dmg:48,color:'#5a3a8f',build:()=>buildRex(KING_LOOK)},
 ];
 // dinos are slower than people: a baby is slower than a cop on foot, a World Eater slower than a police car
-const dinoSpeed=()=>11+220*Math.pow(clamp(Math.log(Math.max(1,P.size))/Math.log(70),0,1),1.3);
+const dinoSpeed=()=>3.3+66*Math.pow(clamp(Math.log(Math.max(1,P.size))/Math.log(70),0,1),1.3);
 // dinos are 2.5x as tough as they used to be, so humans have to work for a kill
 const DINO_HP=250;
 // more forest critters (unit size, facing +z, feet at y=0)
@@ -1043,6 +1043,7 @@ for(let iz=0;iz<GH;iz++) for(let ix=0;ix<GW;ix++){const x=OX+ix*CS,z=OZ+iz*CS; H
 // elevated highways on pillars tying the cities, the suburbs, the power plant and the base together;
 // they ramp down to street level at each end, and only the ramps press into the ground
 // only a Tyrant Rex or bigger can smash a freeway; smaller dinos walk on it
+function castleBack(x,z,pad=0){const dx=x-CASTLE.x,dz=z-CASTLE.z,d=Math.hypot(dx,dz); return d>CASTLE.r+26-pad&&-(dx+dz)*0.7071>0.1*d;}
 const RW=8,ELEV=13,ROAD_BREAK=11.5,BIG_PASS=7,roadRoutes=[],roadGrid=new Map();
 {
   const hRaw=new Float32Array(GW*GH),wRaw=new Float32Array(GW*GH),cap=new Float32Array(GW*GH).fill(1e9);
@@ -1514,6 +1515,12 @@ function mountain(x,z,h,rad,b){
   for(let x=WALK.x0-4;x<=shoreX(WALK.z0)-30;x+=7) rock(x,WALK.z0-4,R(0,6));
   for(let x=WALK.x0-4;x<=shoreX(WALK.z1)-30;x+=7) rock(x,WALK.z1+4,R(0,6));
   for(let z=WALK.z0;z<=WALK.z1;z+=7) rock(WALK.x0-4,z,R(0,6));
+}
+{
+  const ROCK=['#7d776a','#6a655a','#8a8374','#5f6b4a'],boulder=(x,z)=>{const y=groundH(x,z),h=R(10,17),w=R(8,11),b=B(x,z); b.push(Q(G.ico1,pick(ROCK),x,y+h*0.35,z,w,h,w*0.9,0,R(0,6),0,0.12)); b.push(Q(G.ico1,pick(ROCK),x+R(-2,2),y+h*0.8,z+R(-2,2),w*0.6,h*0.5,w*0.55,0,R(0,6),0,0.12));};
+  const rad=CASTLE.r+26,a0=-3*Math.PI/4-Math.acos(0.1),a1=-3*Math.PI/4+Math.acos(0.1);
+  for(let a=a0;a<=a1;a+=7/rad) boulder(CASTLE.x+Math.sin(a)*rad,CASTLE.z+Math.cos(a)*rad);
+  for(const a of [a0,a1]) for(let r=rad;r<rad+420;r+=7){const x=CASTLE.x+Math.sin(a)*r,z=CASTLE.z+Math.cos(a)*r; if(x<WALK.x0-6||z<WALK.z0-6) break; boulder(x,z);}
 }
 const clouds=new THREE.Group();
 {
@@ -2293,7 +2300,7 @@ function breakPart(o,byHuman,depth){
 function openSpot(x,z,clear=20){
   for(let t=0;t<60;t++){
     const a=t*2.399,d=t*3,px=x+Math.sin(a)*d,pz=z+Math.cos(a)*d;
-    if(inLake(px,pz,clear*0.6)||px>shoreX(pz)-80||cityAt(px,pz,clear+10)||nearRoad(px,pz,clear+8)||inRect(px,pz,BASE,clear)||inRect(px,pz,SUB,clear)||inRect(px,pz,PLANT,clear)||Math.hypot(px-CASTLE.x,pz-CASTLE.z)<CASTLE.r+clear+40||landOut(px,pz)>0.5||nearObs(px,pz,clear*0.4)) continue;
+    if(inLake(px,pz,clear*0.6)||castleBack(px,pz,clear)||px>shoreX(pz)-80||cityAt(px,pz,clear+10)||nearRoad(px,pz,clear+8)||inRect(px,pz,BASE,clear)||inRect(px,pz,SUB,clear)||inRect(px,pz,PLANT,clear)||Math.hypot(px-CASTLE.x,pz-CASTLE.z)<CASTLE.r+clear+40||landOut(px,pz)>0.5||nearObs(px,pz,clear*0.4)) continue;
     return [px,pz];
   }
   return null;
@@ -2907,7 +2914,7 @@ function placeCreature(e,initial){
     let x,z;
     if(initial||e.tut){x=RR(Z.x0+8,Z.x1-8); z=RR(Z.z0+8,Z.z1-8);}
     else{const a=Math.random()*TAU,r=RR(55,130); x=clamp(P.x+Math.sin(a)*r,Z.x0+8,Z.x1-8); z=clamp(P.z+Math.cos(a)*r,Z.z0+8,Z.z1-8);}
-    if(e.tut?Math.hypot(x-ISL.x,z-ISL.z)>ISL.r*0.55:e.city?pointInBox(x,FLAT_Y+1.5,z):(inLake(x,z,2)||cityAt(x,z,6)||inRect(x,z,BASE,6))) continue;
+    if(e.tut?Math.hypot(x-ISL.x,z-ISL.z)>ISL.r*0.55:e.city?pointInBox(x,FLAT_Y+1.5,z):(inLake(x,z,2)||cityAt(x,z,6)||inRect(x,z,BASE,6)||castleBack(x,z,10))) continue;
     const dp=Math.hypot(x-P.x,z-P.z),minD=e.tut?0:initial?(sp.size>=5?95:sp.aggro?50:4):45;
     if(dp<minD) continue;
     e.x=x; e.z=z; break;
@@ -2992,7 +2999,7 @@ function updateCreatures(dt,time){
       if(spd>0.01) e.h=angLerp(e.h,Math.atan2(dirx,dirz),damp(6,dt));
       e.spd=lerp(e.spd,spd,damp(5,dt));
       let mv=e.spd; if(sp.hop) mv*=Math.max(0,Math.sin(e.phase*1.3))*1.8;
-      e.x+=Math.sin(e.h)*mv*dt; e.z+=Math.cos(e.h)*mv*dt;
+      {const ox=e.x,oz=e.z; e.x+=Math.sin(e.h)*mv*dt; e.z+=Math.cos(e.h)*mv*dt; if(castleBack(e.x,e.z)){e.x=ox; e.z=oz; e.h+=Math.PI*0.6; e.wh=e.h;}}
       if(e.size<6&&d<70){const o=collideObs(e.x,e.z,e.size*0.35); e.x=o.x; e.z=o.z;}
       if(e.city&&d<300){const o=collideBoxes(e.x,e.z,e.size*0.4,e.y,e.size*1.2); e.x=o.x; e.z=o.z;}
       e.phase+=e.spd*dt*4/Math.sqrt(e.size)+dt*0.5;
@@ -3455,7 +3462,7 @@ function patrolPoint(){
 function freeSpot(minD,maxD){
   for(let t=0;t<40;t++){
     const a=Math.random()*TAU,r=RR(minD,maxD),x=clamp(P.x+Math.sin(a)*r,BOUNDS.x0+10,BOUNDS.x1-10),z=clamp(P.z+Math.cos(a)*r,BOUNDS.z0+10,BOUNDS.z1-10);
-    if(inLake(x,z,4)||pointInBox(x,floorH(x,z)+1,z)) continue; return [x,z];
+    if(inLake(x,z,4)||castleBack(x,z,10)||pointInBox(x,floorH(x,z)+1,z)) continue; return [x,z];
   }
   return null;
 }
@@ -4525,7 +4532,6 @@ addEventListener('keydown',ev=>{
   if(!keys[k]){if(k==='e') useAbility('roar'); else if(k==='q') useAbility('tail'); else if(k==='r') useAbility('quake'); else if(k==='f') useAbility('grab');}
   if(k==='m') toggleMute();
   if(k==='v'&&role==='dino'&&state==='play'){fpCam=!fpCam; banner(fpCam?'First person · V to switch back':'Third person',1200);}
-  if(k==='p'||k==='`') toggleMods();
   if(k==='enter'&&state==='dead') startGame();
   keys[k]=true;
 });
@@ -5024,7 +5030,7 @@ function startGame(){
   state='play'; titleMode=false; titleEl.hidden=true; menuEl.hidden=true; overEl.hidden=true;
   for(const id of ['hud','hp','roster','abil','minimap','destroy']) $(id).hidden=false;
   if(isTouch) touchEl.classList.add('on');
-  const hint=$('hint'); hint.innerHTML=role==='human'?'<kbd>W</kbd><kbd>S</kbd> drive · <kbd>A</kbd><kbd>D</kbd> steer · aim with the mouse, click to shoot · <kbd>1</kbd>-<kbd>4</kbd> guns · <kbd>E</kbd> car/tank · <kbd>C</kbd> new car · <kbd>R</kbd> rocket · <kbd>F</kbd> jet/missiles · <kbd>E</kbd> bail · <kbd>P</kbd> mods':'<kbd>W</kbd><kbd>S</kbd> move · <kbd>A</kbd><kbd>D</kbd> turn · <kbd>Space</kbd> jump · drag to look · <kbd>V</kbd> first person'; hint.hidden=false; hint.style.opacity='1'; setTimeout(()=>hint.style.opacity='0',9000);
+  const hint=$('hint'); hint.innerHTML=role==='human'?'<kbd>W</kbd><kbd>S</kbd> drive · <kbd>A</kbd><kbd>D</kbd> steer · aim with the mouse, click to shoot · <kbd>1</kbd>-<kbd>4</kbd> guns · <kbd>E</kbd> car/tank · <kbd>C</kbd> new car · <kbd>R</kbd> rocket · <kbd>F</kbd> jet/missiles · <kbd>E</kbd> bail':'<kbd>W</kbd><kbd>S</kbd> move · <kbd>A</kbd><kbd>D</kbd> turn · <kbd>Space</kbd> jump · drag to look · <kbd>V</kbd> first person'; hint.hidden=false; hint.style.opacity='1'; setTimeout(()=>hint.style.opacity='0',9000);
   camYaw=P.h+Math.PI; camPitch=0.3; lookOff=0;
   banner(role==='human'?'Hunt dinos! Aim the circle and click to shoot':'Eat anything with a green arrow!',2600);
   sendPresence(true);
@@ -5634,6 +5640,7 @@ function wrecked(o){
 /* ================= the dark green walls round the map edge, and cliffs too steep to climb, are solid ================= */
 function wallBlocked(x0,z0,x1,z1){
   if(tutorial) return false;
+  if(castleBack(x1,z1)&&!castleBack(x0,z0)) return true;
   const big=role==='dino'&&P.size>=BIG_PASS;
   if(!big){const s1=deckSide(x1,z1,P.y); if(s1>=RW-0.9&&s1<1e8&&deckSide(x0,z0,P.y)<RW-0.9) return true;}
   if(deckTop(x1,z1,P.y)>-1e8) return false;
@@ -5680,7 +5687,7 @@ function buildLauncher(){
 function deployLauncher(){
   for(let t=0;t<40;t++){
     const a=Math.random()*TAU,r=RR(120,170)+P.vis*2,x=clamp(P.x+Math.sin(a)*r,BOUNDS.x0+30,BOUNDS.x1-30),z=clamp(P.z+Math.cos(a)*r,BOUNDS.z0+30,BOUNDS.z1-30),y=floorH(x,z);
-    if(inLake(x,z,6)||landOut(x,z)>0||x>shoreX(z)-10||pointInBox(x,y+1.5,z)||nearRoad(x,z,3)) continue;
+    if(inLake(x,z,6)||landOut(x,z)>0||castleBack(x,z,20)||x>shoreX(z)-10||pointInBox(x,y+1.5,z)||nearRoad(x,z,3)) continue;
     const rig=buildLauncher(); scene.add(rig.root); rig.root.position.set(x,y,z); rig.root.rotation.y=Math.atan2(P.x-x,P.z-z);
     const l={rig,x,z,y,alive:true,flash:0}; launchers.push(l); return l;
   }
@@ -5988,7 +5995,7 @@ const PU_TEX=(()=>{
 function puSpot(id){
   for(let t=0;t<60;t++){
     const x=lerp(WALK.x0+30,shoreX(0)-40,hash2(id*0.31+t*7.3,t*1.7)),z=lerp(WALK.z0+30,WALK.z1-30,hash2(t*3.1,id*0.17+t*5.9)),y=floorH(x,z);
-    if(inLake(x,z,6)||landOut(x,z)>0||pointInBox(x,y+1,z)||mtnHit(x,z,y+1,4)||x>shoreX(z)-30) continue;
+    if(inLake(x,z,6)||landOut(x,z)>0||castleBack(x,z,20)||pointInBox(x,y+1,z)||mtnHit(x,z,y+1,4)||x>shoreX(z)-30) continue;
     return [x,y,z];
   }
   return [0,floorH(0,40),40];
@@ -6106,6 +6113,10 @@ const Music={g:null,wind:null,windF:null,next:0,step:0,
   }
 };
 
+for(const o of edibles){
+  if(!o.alive||o.castle||o.road||!castleBack(o.x,o.z,4)) continue;
+  o.alive=false; o.regrow=false; o.banned=true; hideObj(o); for(const b of o.boxes) b.dead=true; for(const ob of o.obs) ob.dead=true;
+}
 /* ================= tutorial island ================= */
 const tutEl=$('tut'),tutEndEl=$('tutEnd');
 const TUT_STEPS=[
