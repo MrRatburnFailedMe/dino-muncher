@@ -537,7 +537,7 @@ const SUB={x0:640,x1:985,z0:-208,z1:420},PLANT={x0:360,x1:590,z0:-590,z1:-400};
 const CASTLE={x:-655,z:-462,r:80,y:96};
 // the castle road: from the old city it winds once round the mountain, hugging the slope, up to the gate
 const CASTLE_ROAD=(()=>{const p=[[-440,-214]],a0=0.714,a1=TAU; for(let k=0;k<=24;k++){const t=k/24,a=lerp(a0,a1,t),r=102+128*Math.pow(1-t,2); p.push([CASTLE.x+Math.sin(a)*r,CASTLE.z+Math.cos(a)*r]);} p.push([CASTLE.x,CASTLE.z+84]); p.push([CASTLE.x,CASTLE.z+66]); p.grade=0.16; p.ground=true; return p;})();
-const ROUTES=[CASTLE_ROAD,
+const ROUTES=[
   [[310,-244],[300,-280],[150,-300],[0,-305],[-150,-300],[-290,-272],[-322,-214]],
   [[450,-244],[460,-320],[470,-400]],
   [[606,-14],[646,-14]],
@@ -901,7 +901,7 @@ const SPECIES=[
   {id:'king',dino:true,name:'Dino King',model:'Trex',tint:{body:'#4a2f7a',belly:'#d9b84a'},size:18,count:1,speed:3.0,aggro:34,chase:15,dmg:48,color:'#5a3a8f',build:()=>buildRex(KING_LOOK)},
 ];
 // dinos are slower than people: a baby is slower than a cop on foot, a World Eater slower than a police car
-const dinoSpeed=()=>9.5+27*clamp(Math.log(Math.max(1,P.size))/Math.log(70),0,1);
+const dinoSpeed=()=>12.35+35.1*clamp(Math.log(Math.max(1,P.size))/Math.log(70),0,1);
 // dinos are 2.5x as tough as they used to be, so humans have to work for a kill
 const DINO_HP=250;
 // more forest critters (unit size, facing +z, feet at y=0)
@@ -1475,6 +1475,13 @@ function mountain(x,z,h,rad,b){
   for(const [x,z] of per) mountain(x,z,R(170,320),R(40,62),B(x,z));
   for(let i=0;i<80;i++){const a=i/80*TAU,x=TCX+Math.sin(a)*R(1500,1800),z=TCZ+Math.cos(a)*R(1120,1400); if(x>LAND.x1-60) continue; mountain(x,z,R(480,820),R(160,260),B(x,z));}
 }
+{
+  // big boulders along the edge of where you can walk, on the north, west and south sides
+  const ROCK=['#7d776a','#6a655a','#8a8374','#5f6b4a'],rock=(x,z,ry)=>{if(nearRoad(x,z,4)) return; const y=groundH(x,z),h=R(9,16),w=R(8,11),b=B(x,z); b.push(Q(G.ico1,pick(ROCK),x,y+h*0.35,z,w,h,w*0.9,0,ry,0,0.12)); b.push(Q(G.ico1,pick(ROCK),x+R(-2,2),y+h*0.8,z+R(-2,2),w*0.6,h*0.5,w*0.55,0,R(0,6),0,0.12));};
+  for(let x=WALK.x0-4;x<=shoreX(WALK.z0)-30;x+=7) rock(x,WALK.z0-4,R(0,6));
+  for(let x=WALK.x0-4;x<=shoreX(WALK.z1)-30;x+=7) rock(x,WALK.z1+4,R(0,6));
+  for(let z=WALK.z0;z<=WALK.z1;z+=7) rock(WALK.x0-4,z,R(0,6));
+}
 const clouds=new THREE.Group();
 {
   const p=[];
@@ -1944,9 +1951,9 @@ const SUB_AX=[652,735,818,901,975],SUB_SZ=[]; for(let k=-3;k<=7;k++) SUB_SZ.push
 const SUBC={r:SUB,sub:true};
 const CIVIC={'1,4':'school','2,6':'library','0,7':'shops','3,2':'apts','2,8':'church','1,7':'fire','3,5':'hospital','0,2':'apts','2,3':'shops'};
 (function buildSuburb(){
-  const CY=FLAT_Y,D=(x,z)=>B(x,z,decals),z0=SUB_SZ[0]-6,z1=SUB_SZ[SUB_SZ.length-1]+6,x0=SUB_AX[0]-6,x1=SUB_AX[SUB_AX.length-1]+6;
-  for(const ax of SUB_AX){for(let z=z0;z<z1;z+=40){const l=Math.min(40,z1-z); D(ax,z+l/2).push(Q(G.box,'#3d4045',ax,CY+0.06,z+l/2,12,0.12,l,0,0,0,0.02)); for(const s of [-1,1]) D(ax,z+l/2).push(Q(G.box,'#bdb9af',ax+s*7,CY+0.1,z+l/2,2,0.16,l,0,0,0,0.02)); for(let q=z+2;q<z+l-2;q+=8) D(ax,q).push(Q(G.box,'#eeeeee',ax,CY+0.14,q,0.2,0.05,3,0,0,0,0));}}
-  for(const sz of SUB_SZ){for(let x=x0;x<x1;x+=40){const l=Math.min(40,x1-x); D(x+l/2,sz).push(Q(G.box,'#3d4045',x+l/2,CY+0.1,sz,l,0.12,12,0,0,0,0.02)); for(const s of [-1,1]) D(x+l/2,sz).push(Q(G.box,'#bdb9af',x+l/2,CY+0.11,sz+s*7,l,0.16,2,0,0,0,0.02)); for(let q=x+2;q<x+l-2;q+=8) D(q,sz).push(Q(G.box,'#eeeeee',q,CY+0.15,sz,3,0.05,0.2,0,0,0,0));}}
+  const CY=FLAT_Y,D=(x,z)=>B(x,z,decals),z0=SUB_SZ[0]-10,z1=SUB_SZ[SUB_SZ.length-1]+10,x0=SUB_AX[0]-10,x1=SUB_AX[SUB_AX.length-1]+10;
+  for(const ax of SUB_AX){for(let z=z0;z<z1;z+=40){const l=Math.min(40,z1-z); D(ax,z+l/2).push(Q(G.box,'#3d4045',ax,CY+0.06,z+l/2,20,0.12,l,0,0,0,0.02)); for(const s of [-1,1]) D(ax,z+l/2).push(Q(G.box,'#bdb9af',ax+s*11,CY+0.1,z+l/2,2,0.16,l,0,0,0,0.02)); for(let q=z+2;q<z+l-2;q+=8) D(ax,q).push(Q(G.box,'#eeeeee',ax,CY+0.14,q,0.2,0.05,3,0,0,0,0));}}
+  for(const sz of SUB_SZ){for(let x=x0;x<x1;x+=40){const l=Math.min(40,x1-x); D(x+l/2,sz).push(Q(G.box,'#3d4045',x+l/2,CY+0.1,sz,l,0.12,20,0,0,0,0.02)); for(const s of [-1,1]) D(x+l/2,sz).push(Q(G.box,'#bdb9af',x+l/2,CY+0.11,sz+s*11,l,0.16,2,0,0,0,0.02)); for(let q=x+2;q<x+l-2;q+=8) D(q,sz).push(Q(G.box,'#eeeeee',q,CY+0.15,sz,3,0.05,0.2,0,0,0,0));}}
   const WALL=['#f2e6d0','#e8d8b8','#d9e4ea','#f4f1ea','#e6cfc0','#cfe0c8','#f0dca0','#d8c8e0','#c9d8e8','#ead2b0','#b5523a','#9b4f3a','#c8b8a0'],ROOF=['#8a3b2e','#5a4a40','#3f4a5a','#6b6f74','#7a5230','#2f3a2f','#44506a'];
   const obj=(x0,x1,z0,z1,h,col,size,extra)=>beginObj((x0+x1)/2,(z0+z1)/2,Object.assign({y:CY,size,r:Math.max(x1-x0,z1-z0)/2,top:h,color:col,rect:{x0,x1,z0,z1},sub:true},extra));
   // roof shapes: hip (pyramid), gable (a square bar turned 45° so its top half is the roof), or flat with a lip
@@ -1977,7 +1984,7 @@ const CIVIC={'1,4':'school','2,6':'library','0,7':'shops','3,2':'apts','2,8':'ch
     }
     b.push(Q(G.box,door,lx+RR(-w*0.25,w*0.25),CY+1.1,lz-inward*(d/2+0.05),1.1,2.2,0.12,0,0,0,0));
     const gs=rand()<0.5?-1:1,gx=lx+gs*(w/2+2.8);
-    if(st!=='cottage'&&Math.abs(gx-lx)+3<lw/2+2){b.push(Q(G.box,wall,gx,CY+1.6,lz+inward*0.5,5.4,3.2,6.5,0,0,0,0.03)); b.push(Q(G.box,roof,gx,CY+3.3,lz+inward*0.5,5.8,0.3,6.9,0,0,0,0.03)); b.push(Q(G.box,'#d8d8d8',gx,CY+1.3,lz+inward*0.5-inward*3.27,4,2.4,0.1,0,0,0,0)); addBox(gx-2.7,gx+2.7,lz+inward*0.5-3.25,lz+inward*0.5+3.25,CY,CY+3.4);
+    if(st!=='cottage'&&Math.abs(gx-lx)+3<lw/2+2){b.push(Q(G.box,wall,gx,CY+1.6,lz+inward*0.5,5.4,3.2,6.5,0,0,0,0.03)); addBox(gx-2.7,gx+2.7,lz+inward*0.5-3.25,lz+inward*0.5+3.25,CY,CY+3.4); b.push(Q(G.box,roof,gx,CY+3.3,lz+inward*0.5,5.8,0.3,6.9,0,0,0,0.03)); b.push(Q(G.box,'#d8d8d8',gx,CY+1.3,lz+inward*0.5-inward*3.27,4,2.4,0.1,0,0,0,0)); addBox(gx-2.7,gx+2.7,lz+inward*0.5-3.25,lz+inward*0.5+3.25,CY,CY+3.4);
       D(gx,fz).push(Q(G.box,'#9a968e',gx,CY+0.09,fz+inward*4.6,4,0.1,7.2,0,0,0,0.02));
       if(rand()<0.45){const cc=pickM(['#d23a3a','#2f6fd6','#2a2a2e','#e8e8e8','#3f9a5a','#f08a24']),cz2=fz+inward*5.2; b.push(Q(G.box,cc,gx,CY+0.75,cz2,1.9,0.7,4.2,0,0,0,0.02)); b.push(Q(G.box,'#22303f',gx,CY+1.35,cz2+0.2,1.7,0.55,2.2,0,0,0,0.02)); for(const [a2,c2] of [[-1,-1],[1,-1],[-1,1],[1,1]]) b.push(Q(G.cyl8,'#1a1a1a',gx+a2*0.9,CY+0.38,cz2+c2*1.3,0.7,0.3,0.7,0,0,Math.PI/2));}}
     endObj();
@@ -2023,20 +2030,20 @@ const CIVIC={'1,4':'school','2,6':'library','0,7':'shops','3,2':'apts','2,8':'ch
     }
   }
   for(let i=0;i<SUB_AX.length-1;i++) for(let j=0;j<SUB_SZ.length-1;j++){
-    const bx0=SUB_AX[i]+8,bx1=SUB_AX[i+1]-8,bz0=SUB_SZ[j]+8,bz1=SUB_SZ[j+1]-8;
+    const bx0=SUB_AX[i]+12,bx1=SUB_AX[i+1]-12,bz0=SUB_SZ[j]+12,bz1=SUB_SZ[j+1]-12;
     cityBlocks.push({i:100+i,j,x0:bx0-2,x1:bx1+2,z0:bz0-2,z1:bz1+2,park:false,city:SUBC});
     const cv=CIVIC[i+','+j]; if(cv&&!inLake((bx0+bx1)/2,(bz0+bz1)/2,30)){civic(cv,bx0,bx1,bz0,bz1); continue;}
     const n=Math.max(2,Math.floor((bx1-bx0)/17)),lw=(bx1-bx0)/n;
     for(const front of [-1,1]) for(let k=0;k<n;k++){
-      const lx=bx0+lw*(k+0.5),fz=front<0?bz0:bz1,inward=-front,lz=fz+inward*12;
+      const lx=bx0+lw*(k+0.5),fz=front<0?bz0:bz1,inward=-front,lz=fz+inward*10.5;
       if(inLake(lx,lz,10)) continue;
       house(lx,lz,lw,fz,inward);
-      const b=B(lx,lz),bz=fz+inward*23.5; if(rand()<0.7) b.push(Q(G.box,pickM(['#f4f1ea','#8a6a4a','#9aa0a6']),lx,CY+0.7,bz,lw-0.6,1.4,0.15,0,0,0,0.02));
-      if(rand()<0.6){const tx=lx+RR(-lw*0.35,lw*0.35),tz=fz+inward*RR(18,21); if(!nearObs(tx,tz,2)) pick([bushTree,bushTree,birch])(tx,tz);}
-      if(rand()<0.18) D(lx,fz+inward*19.5).push(Q(G.box,'#3fb0e0',lx+RR(-2,2),CY+0.12,fz+inward*19.5,RR(4,6),0.08,3,0,0,0,0));
+      const b=B(lx,lz),bz=fz+inward*17.6; if(rand()<0.7){b.push(Q(G.box,pickM(['#f4f1ea','#8a6a4a','#9aa0a6']),lx,CY+0.7,bz,lw-0.6,1.4,0.15,0,0,0,0.02)); addBox(lx-lw/2+0.3,lx+lw/2-0.3,bz-0.25,bz+0.25,CY,CY+1.4).noClimb=true;}
+      if(rand()<0.6){const tx=lx+RR(-lw*0.35,lw*0.35),tz=fz+inward*RR(15.6,16.6); if(!nearObs(tx,tz,2)) pick([bushTree,bushTree,birch])(tx,tz);}
+      if(rand()<0.18) D(lx,fz+inward*15.8).push(Q(G.box,'#3fb0e0',lx+RR(-2,2),CY+0.12,fz+inward*15.8,RR(4,6),0.08,2.4,0,0,0,0));
     }
   }
-  for(const ax of SUB_AX) for(const sz of SUB_SZ){const lx=ax+8.5,lz=sz+8.5; if(!inLake(lx,lz,2)) smallProp(lx,lz,1.4,6,'#3b4048',b=>{b.push(Q(G.cyl6,'#3b4048',lx,CY+3,lz,0.2,6,0.2)); b.push(Q(G.box,'#2b2f35',lx-1,CY+5.9,lz,2,0.2,0.4)); glows.push({x:lx-1.8,y:CY+5.75,z:lz,lamp:true,obj:curObj});});}
+  for(const ax of SUB_AX) for(const sz of SUB_SZ){const lx=ax+12.5,lz=sz+12.5; if(!inLake(lx,lz,2)) smallProp(lx,lz,1.4,6,'#3b4048',b=>{b.push(Q(G.cyl6,'#3b4048',lx,CY+3,lz,0.2,6,0.2)); b.push(Q(G.box,'#2b2f35',lx-1,CY+5.9,lz,2,0.2,0.4)); glows.push({x:lx-1.8,y:CY+5.75,z:lz,lamp:true,obj:curObj});});}
 })();
 
 /* ================= the nuclear power plant, built from parts that can be smashed or blown off ================= */
@@ -2765,7 +2772,7 @@ const Snd={ctx:null,master:null,muted:false,nb:null,siren:null,sirenG:null,
   // recorded clips (roar, footsteps, missile blast) ship as base64 text like the models
   raw:{},bufs:{},lastStep:-1,roarSrc:null,
   async preload(){
-    await Promise.all(['roarc','boomc','step0','step1','step2','step3','akshot','sgshot','sgload','crumble','bite','chewing','swallow'].map(async n=>{
+    await Promise.all(['roarc','boomc','step0','step1','step2','step3','akshot','sgshot','sgload','crumble','bite','chewing','swallow','pshot','quakec','whip'].map(async n=>{
       try{const bin=atob((await (await fetch('sounds/'+n+'.txt')).text()).replace(/\s+/g,'')),u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); this.raw[n]=u.buffer;}catch(e){console.warn('Could not load sound',n,e);}
     }));
     this.decodeAll();
@@ -2933,7 +2940,7 @@ function updateCreatures(dt,time){
     if(!sp.plant){
       let dirx,dirz,spd;
       // every animal reacts when you get close: timid ones run, tough ones fight back
-      const alertR=6+e.size*2.5+P.size*2;
+      const alertR=(6+e.size*2.5+P.size*2)*1.8+(role==='human'?14:0);
       if(e.scared>0) e.scared-=dt;
       const defend=playing&&!canEat&&!sp.aggro&&sp.temper==='fight'&&!e.dummy;
       hostile=threat||defend;
@@ -3088,8 +3095,8 @@ for(const C of CITIES){
   for(const ax of C.AX) for(const k of [0.27,0.7]){LANES.push({axis:'z',c:ax+AW*k,dir:1,city:C}); LANES.push({axis:'z',c:ax-AW*k,dir:-1,city:C});}
   for(const sz of C.SZ){LANES.push({axis:'x',c:sz+SW*0.4,dir:-1,city:C}); LANES.push({axis:'x',c:sz-SW*0.4,dir:1,city:C});}
 }
-for(const ax of SUB_AX) for(const k of [-1,1]) LANES.push({axis:'z',c:ax+k*3,dir:k,city:SUBC});
-for(const sz of SUB_SZ) for(const k of [-1,1]) LANES.push({axis:'x',c:sz+k*3,dir:-k,city:SUBC});
+for(const ax of SUB_AX) for(const k of [-1,1]) LANES.push({axis:'z',c:ax+k*4.5,dir:k,city:SUBC});
+for(const sz of SUB_SZ) for(const k of [-1,1]) LANES.push({axis:'x',c:sz+k*4.5,dir:-k,city:SUBC});
 const laneMin=l=>l.axis==='z'?l.city.r.z0+2:l.city.r.x0+2,laneMax=l=>l.axis==='z'?l.city.r.z1-2:l.city.r.x1-2;
 function lanePos(l,t){return l.axis==='z'?[l.c,t]:[t,l.c];}
 
@@ -3292,6 +3299,7 @@ function updateHumans(dt,time){
     if(playing){
       const pr=P.vis*0.42;
       if(edible&&canChew()&&eatDist(hm.x,hm.z,d)<pr+0.5+P.vis*0.3&&Math.abs(hm.y-P.y)<P.vis+1.5){
+        {const hb=hm.kind==='civ'?40:hm.kind==='soldier'?100:70; P.score+=hb; floatText(`+${hb} HUMAN!`,hm.x,hm.y+P.vis*1.5+3,hm.z,'#ff8a6a',24);}
         eatThing(hm.x,hm.y+1,hm.z,hm.gainSize,hm.kind==='civ'?'#e2504c':hm.kind==='cop'?'#24407a':'#5d6b3a');
         hm.alive=false; hm.eatenT=0; hm.eatDur=P.chew.dur; hm.eatFrom=root.position.clone(); hm.eatFit=Math.min(1,P.vis*0.35/(1.9*hm.scale)); continue;
       }
@@ -3928,8 +3936,10 @@ function smash(cx,cz,rad,maxSize,cone,statics=true){
   }
   for(const l of launchers) if(l.alive&&inside(l.x,l.z,5)){destroyLauncher(l); n++;}
   if(role==='dino') forEdiblesNear(cx,cz,rad+12,o=>{if(o.alive&&o.boat&&inside(o.x,o.z,o.r)){sinkBoat(o); pts+=boatPoints(o); n++;}});
+  let chips=0;
   if(statics) forEdiblesNear(cx,cz,rad+12,o=>{
-    if(!o.alive||o.rect||o.size>=maxSize*0.6) return;
+    if(o.alive&&o.breakable&&!o.fence&&chips<3){const d=Math.max(0,Math.hypot(o.x-cx,o.z-cz)-o.r); if(d<rad&&o.y0<P.y+P.vis*1.5){chips++; hitPart(o,35,false);} return;}
+    if(!o.alive||o.rect||o.breakable&&!o.fence||o.size>=maxSize*0.6) return;
     const d=o.rect?rectDist(cx,cz,o.rect):Math.max(0,Math.hypot(o.x-cx,o.z-cz)-o.r); if(d>rad) return;
     if(cone){const dx=o.x-cx,dz=o.z-cz,dd=Math.hypot(dx,dz); if(dd>1&&(dx*cone.dx+dz*cone.dz)/dd<cone.cos) return;}
     pts+=destroyStatic(o); n++;
@@ -3955,14 +3965,14 @@ function useAbility(id){
     smash(P.x,P.z,r,P.size*1.25,{dx:fx,dz:fz,cos:0.6});
   } else if(id==='tail'){
     spinT=TAIL_SPIN; const r=P.vis*1.9;
-    shockwave(P.x,y+P.vis*0.5,P.z,r,new THREE.Color(1.2,1.8,0.8),0.45); Snd.whoosh();
+    shockwave(P.x,y+P.vis*0.5,P.z,r,new THREE.Color(1.2,1.8,0.8),0.45); if(Snd.bufs.whip) Snd.play('whip',0.9); else Snd.whoosh();
     smash(P.x,P.z,r,P.size*1.15);
   } else if(id==='charge'){
     charging=1.6; Snd.roar(true); banner('CHARGE!',900);
   } else if(id==='quake'){
     const r=22+P.vis*2.5;
     for(let k=0;k<3;k++) shockwave(P.x,y,P.z,r*(0.5+k*0.25),new THREE.Color(2,1.2,0.5),0.9,k*0.15);
-    crater(P.x,P.z,4+P.vis*2); shake=Math.max(shake,1.2); Snd.boom(0); Snd.boom(0);
+    crater(P.x,P.z,4+P.vis*2); shake=Math.max(shake,1.2); if(Snd.bufs.quakec) Snd.play('quakec',1); else {Snd.boom(0); Snd.boom(0);}
     for(let k=0;k<6;k++){const a=Math.random()*TAU,d=Math.random()*r; burst(P.x+Math.sin(a)*d,y,P.z+Math.cos(a)*d,'#6b5a3e',10,Math.max(1,P.vis*0.4),8,8);}
     smash(P.x,P.z,r,P.size*1.3);
   }
@@ -4009,7 +4019,7 @@ function updateAbilityBar(){
     s.b.hidden=!hu; if(!hu) continue;
     const on=H.rank>=s.a.rank,c=s.a.id==='rocket'?Math.max(0,H.flying?H.mslReload||0:H.rocketCD):0,full=H.flying?10:2.5;
     s.b.className='slot'+(on?(c>0?'':' ready'):' locked');
-    s.k.textContent=on?(s.a.id==='jet'&&H.flying?'F: BAIL':s.a.id==='car'&&H.inCar?'E: EXIT':s.a.key):'RANK '+(s.a.rank+1);
+    s.k.textContent=on?(s.a.id==='jet'&&H.flying?'E: EJECT':s.a.id==='rocket'&&H.flying?'F: ROCKET':s.a.id==='car'&&H.flying?'-':s.a.id==='car'&&H.inCar?'E: EXIT':s.a.key):'RANK '+(s.a.rank+1);
     s.cd.style.setProperty('--p',on&&c>0?(c/full).toFixed(3):'0'); s.t.textContent='';
   }
   if(hu) return;
@@ -4241,7 +4251,7 @@ function damageTarget(t,dmg,kind,x,y,z){
 }
 function killCreature(e){
   e.alive=false; e.dieT=0; e.eatenT=-1;
-  if(!e.spec.dino){const ap=Math.max(2,Math.round(4*e.size)); addPoints(ap,e.x,e.y+e.size*1.2,e.z,`+${ap} ${e.spec.name}`); return;}
+  if(!e.spec.dino){const ap=Math.max(10,Math.round(15*e.size)); addPoints(ap,e.x,e.y+e.size*1.2,e.z,`+${ap} ${e.spec.name}`); return;}
   H.kills++;
   const pts=Math.round(20*e.size);
   addPoints(pts,e.x,e.y+e.size*1.2,e.z,`+${pts} DINO DOWN!`);
@@ -4376,7 +4386,7 @@ function updateJetFlight(dt){
   if(P.y>330) H.pitch=Math.min(H.pitch,0);
   const hs=Math.cos(H.pitch)*H.speed,vs=Math.sin(H.pitch)*H.speed;
   P.vx=Math.sin(P.h)*hs; P.vz=Math.cos(P.h)*hs; P.x+=P.vx*dt; P.z+=P.vz*dt; P.y+=vs*dt;
-  const j=H.jet.root; j.visible=false; j.position.set(P.x,P.y,P.z); j.rotation.order='YXZ'; j.rotation.set(-H.pitch,P.h,H.bank); H.jet.flame.scale.y=2.6+Math.random()*1.4+(keys.shift?1.5:0);
+  const j=H.jet.root; j.position.set(P.x,P.y,P.z); j.rotation.order='YXZ'; j.rotation.set(-H.pitch,P.h,H.bank); H.jet.flame.scale.y=2.6+Math.random()*1.4+(keys.shift?1.5:0);
   if(Math.random()<dt*20) burst(P.x-Math.sin(P.h)*9,P.y,P.z-Math.cos(P.h)*9,'#e8e8e8',1,1.2,0.5,0.3,-0.3);
   const ground=Math.max(floorH(P.x,P.z),SEA_Y);
   if(P.y<ground+1.5||pointInBox(P.x,P.y,P.z)){crashJet(); return;}
@@ -5033,8 +5043,9 @@ const GUNS=[
   {id:'minigun',name:'Minigun',pts:900,cd:0.075,dmg:7,pel:1,spread:0.03},
 ];
 function gunSound(i,dist=0){
-  const g=GUNS[i]; if(!g||i===0) return Snd.shot(dist);
+  const g=GUNS[i]; if(!g) return Snd.shot(dist);
   const v=clamp(1-dist/220,0.08,1);
+  if(i===0) return Snd.bufs.pshot?Snd.play('pshot',0.75*v,RR(0.96,1.04)):Snd.shot(dist);
   if(g.id==='shotgun') return Snd.play('sgshot',0.85*v,RR(0.96,1.04));
   Snd.play('akshot',(g.id==='minigun'?0.4:0.6)*v,(g.id==='mg'?0.9:g.id==='minigun'?1.18:1)*RR(0.97,1.03));
 }
@@ -5157,13 +5168,19 @@ function toggleCar(){
   else floatText('No vehicle nearby. Press C to call a car',P.x,P.y+2.6,P.z,'#ffd36a',18);
 }
 let tooDeepT=0;
+// paved ground: city streets, suburb roads, freeways and the paved base and plant
+function onRoad(x,z){
+  if(cityAt(x,z,2)||inRect(x,z,BASE)||inRect(x,z,PLANT)||nearRoad(x,z,1)) return true;
+  if(inRect(x,z,SUB,10)) return SUB_AX.some(a=>Math.abs(x-a)<11)||SUB_SZ.some(q=>Math.abs(z-q)<11);
+  return false;
+}
 function updateDriving(dt){
   const c=H.car,r=c.rig;
   let steer=-joy.x,thr=joy.y;
   if(keys.a||keys.arrowleft) steer+=1; if(keys.d||keys.arrowright) steer-=1;
   if(keys.w||keys.arrowup) thr+=1; if(keys.s||keys.arrowdown) thr-=1;
   steer=clamp(steer,-1,1); thr=clamp(thr,-1,1);
-  const max=(clock<(H.puSpeedT||0)?1.3:1)*(c.tank?(keys.shift?24:18):(keys.shift?56:40)*(cityAt(P.x,P.z,2)?1:0.85));
+  const max=(clock<(H.puSpeedT||0)?1.3:1)*(c.tank?(keys.shift?24:18)*(onRoad(P.x,P.z)?1:0.8):(keys.shift?56:40)*(onRoad(P.x,P.z)?1.35:0.45));
   if(thr>0) c.speed=Math.min(max,c.speed+(c.speed<0?40:16)*thr*dt);
   else if(thr<0) c.speed=Math.max(-12,c.speed+(c.speed>0?-40:-14)*-thr*dt);
   else c.speed*=1-Math.min(1,dt*0.9);
@@ -5179,7 +5196,7 @@ function updateDriving(dt){
     if(want>0.05&&got<want*0.6&&Math.abs(c.speed)>8){carDamage(Math.abs(c.speed)*1.1); Snd.hit(); burst(o.x,P.y+1,o.z,'#d8d0b8',6,0.6,4,3); shake=Math.max(shake,0.15);}
     if(want>0.05&&got<want*0.6) c.speed*=0.5;
     const Bd=roadWalk(P.x,P.z),px=P.x,pz=P.z; P.x=clamp(o.x,Bd.x0+4,Bd.x1-4); P.z=clamp(o.z,Bd.z0+4,Bd.z1-4);
-    if(wallBlocked(px,pz,P.x,P.z)){P.x=px; P.z=pz; c.speed*=-0.2; if(clock>(H.wallMsg||0)){H.wallMsg=clock+2; floatText('Too steep!',P.x,P.y+3,P.z,'#ffd36a',18);}}
+    if(wallBlocked(px,pz,P.x,P.z)){P.x=px; P.z=pz; c.speed*=-0.2; if(clock>(H.wallMsg||0)){H.wallMsg=clock+2; floatText('BOINK!',P.x,P.y+3,P.z,'#ffd36a',24);}}
   }
   // follow the ground and tip with the slope
   // drive along the ground or up onto the highway deck; drop off it if a span is gone
