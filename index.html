@@ -2803,8 +2803,11 @@ function updateFloats(dt){
 }
 
 /* ================= sound ================= */
-const Snd={ctx:null,master:null,muted:false,nb:null,siren:null,sirenG:null,
-  init(){ if(this.ctx) return; try{ const AC=window.AudioContext||window.webkitAudioContext; this.ctx=new AC(); this.master=this.ctx.createGain(); this.master.gain.value=0.45; this.master.connect(this.ctx.destination);
+const Snd={ctx:null,master:null,userMuted:false,sdkMuted:false,
+  get muted(){return this.userMuted||this.sdkMuted;}, set muted(v){this.userMuted=v;},
+  applyMute(){ if(this.ctx) this.master.gain.setTargetAtTime(this.muted?0:0.45,this.ctx.currentTime,0.05); },
+  nb:null,siren:null,sirenG:null,
+  init(){ if(this.ctx) return; try{ const AC=window.AudioContext||window.webkitAudioContext; this.ctx=new AC(); this.master=this.ctx.createGain(); this.master.gain.value=this.muted?0:0.45; this.master.connect(this.ctx.destination);
     const len=this.ctx.sampleRate; this.nb=this.ctx.createBuffer(1,len,len); const d=this.nb.getChannelData(0); for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
     this.siren=this.ctx.createOscillator(); this.siren.type='triangle'; this.sirenG=this.ctx.createGain(); this.sirenG.gain.value=0; this.siren.connect(this.sirenG); this.sirenG.connect(this.master); this.siren.start();
     this.decodeAll();
@@ -4570,7 +4573,19 @@ stick.addEventListener('pointerup',endJoy); stick.addEventListener('pointercance
 document.getElementById('jumpBtn').addEventListener('pointerdown',ev=>{ev.preventDefault(); jumpQueued=true;});
 document.getElementById('biteBtn').addEventListener('pointerdown',ev=>{ev.preventDefault(); if(role==='human'){H.trigger=true; H.triggerNew=true;} else snapBite();});
 document.getElementById('biteBtn').addEventListener('pointerup',()=>{H.trigger=false;});
-function toggleMute(){Snd.muted=!Snd.muted;}
+function toggleMute(){Snd.muted=!Snd.userMuted; Snd.applyMute(); if(Snd.sdkMuted) banner('Sound is muted in your CrazyGames settings',1800);}
+/* ================= CrazyGames SDK: follow the site's mute setting (skipped inside Claude) ================= */
+if(!(window.claude&&typeof window.claude.use==='function')){
+  const sdkTag=document.createElement('script'); sdkTag.src='https://sdk.crazygames.com/crazygames-sdk-v3.js';
+  sdkTag.onload=async()=>{
+    try{
+      const sdk=window.CrazyGames.SDK; await sdk.init();
+      const apply=st=>{Snd.sdkMuted=!!(st&&st.muteAudio); Snd.applyMute();};
+      apply(sdk.game.settings); sdk.game.addSettingsChangeListener(apply);
+    }catch(e){console.warn('CrazyGames SDK unavailable',e);}
+  };
+  document.head.appendChild(sdkTag);
+}
 
 /* ================= player update ================= */
 // rotate a bone around a world-space axis on top of its animated pose, without the offset piling up frame to frame
