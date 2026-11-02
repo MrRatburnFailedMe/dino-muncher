@@ -2997,6 +2997,7 @@ function updateCreatures(dt,time){
       const la=3*Math.max(1,e.size*0.4);
       if(!sp.fly&&inLake(e.x+dirx*la,e.z+dirz*la,1)){const tx=dirx; dirx=-dirz; dirz=tx; e.wh=Math.atan2(dirx,dirz);}
       if(spd>0.01) e.h=angLerp(e.h,Math.atan2(dirx,dirz),damp(6,dt));
+      if(sp.dino) spd*=0.7;
       e.spd=lerp(e.spd,spd,damp(5,dt));
       let mv=e.spd; if(sp.hop) mv*=Math.max(0,Math.sin(e.phase*1.3))*1.8;
       {const ox=e.x,oz=e.z; e.x+=Math.sin(e.h)*mv*dt; e.z+=Math.cos(e.h)*mv*dt; if(castleBack(e.x,e.z)){e.x=ox; e.z=oz; e.h+=Math.PI*0.6; e.wh=e.h;}}
@@ -3185,7 +3186,7 @@ function updateAlerts(dt){
   A.rageT=Math.max(0,(A.rageT||0)-dt);
   A.armyHunt=alive&&(mods.army||(A.wanted>=5&&A.cityTime>60)||A.rageT>0);
   A.baseHeat=inBase?10:A.baseHeat-dt; A.army=alive&&(A.baseHeat>0||A.armyHunt);
-  if(A.police&&!A.wasPolice) bigAlert('police','THE POLICE ARE ON YOU','Cops are on the way. Leave the city to lose them');
+  if(A.police&&!A.wasPolice) bigAlert('police','THE POLICE ARE ON YOU','You take 2.5x damage in the city. Hit and run!');
   if(A.armyHunt&&!A.wasHunt) bigAlert('army','THE MILITARY IS COMING',A.rageT>0?WRECK_MSG[A.rageZone]+' Soldiers, jets and missiles are on the way':'Soldiers, jets and missiles are on the way');
   else if(A.army&&!A.wasArmy) bigAlert('army','RESTRICTED AREA','Soldiers are firing at you!');
   if(A.animalOn&&!A.wasAnimal) bigAlert('animal','ANIMAL CONTROL IS ON YOU','Sleep darts and lassos. Outrun the vans!');
@@ -3689,7 +3690,8 @@ function hurtBy(dmg,who,fx,fz,knock,kind){
   if(!P.alive||mods.god||tutorial) return;
   // in the car, the car soaks up most of it
   if(role==='human'&&H.flying){jetDamage(dmg,who); return;}
-  if(role==='human'&&H.inCar&&H.car){carDamage(dmg*0.8); dmg*=0.2; knock=false;}
+  if(role==='human'&&H.inCar&&H.car){carDamage(dmg*(kind==='bite'?0.3:0.8)); dmg*=0.2; knock=false;}
+  if(role==='dino'&&!tutorial&&cityAt(P.x,P.z,4)) dmg*=2.5;
   P.hp-=dmg; P.lastHit=clock;
   hitFx(kind||(knock?'rocket':'bullet'),dmg);
   if(knock){const dx=P.x-fx,dz=P.z-fz,d=Math.hypot(dx,dz)||1,kb=8; P.vx+=dx/d*kb; P.vz+=dz/d*kb; P.vy=4+P.vis*0.4; P.onGround=false; shake=Math.max(shake,0.4);}
@@ -5252,7 +5254,7 @@ function updateDriving(dt){
   // ramming a dino hurts it
   if(Math.abs(c.speed)>8) for(const e of creatures){
     if(!e.alive||e.tut&&!tutorial) continue; const d=Math.hypot(e.x-P.x,e.z-P.z),rr=2.2+e.size*0.4; if(d>rr) continue;
-    if(e.spec.dino){damageTarget({kind:'ai',e,x:e.x,y:e.y+e.size*0.5,z:e.z,r:e.size*0.5},Math.abs(c.speed)*2.5,'bullet',e.x,e.y+e.size*0.5,e.z); carDamage(Math.abs(c.speed)*0.6); c.speed*=0.35; Snd.hit(); shake=Math.max(shake,0.2);}
+    if(e.spec.dino){damageTarget({kind:'ai',e,x:e.x,y:e.y+e.size*0.5,z:e.z,r:e.size*0.5},Math.abs(c.speed)*2.5,'bullet',e.x,e.y+e.size*0.5,e.z); carDamage(Math.abs(c.speed)*0.3); c.speed*=0.35; Snd.hit(); shake=Math.max(shake,0.2);}
     else if(e.size<1.5&&!e.spec.plant){e.alive=false; e.eatenT=-1; e.rig.root.visible=false; e.respawn=RR(8,16); burst(e.x,e.y+0.5,e.z,pickM(BLOOD),8,0.6,4,3);}
   }
 }
