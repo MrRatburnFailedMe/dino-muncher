@@ -1,8 +1,8 @@
-# Dino Muncher 🦖
+# Cops vs Dino 🦖
 
 **Cops vs Dino.** Start as a tiny dinosaur, eat everything in sight, and grow into a giant T-Rex that tears cities apart. Or play as the humans and try to bring the monster down.
 
-Dino Muncher is a free low-poly multiplayer game that runs right in your browser. There's nothing to download or install.
+Cops vs Dino is a free low-poly multiplayer game that runs right in your browser. There's nothing to download or install.
 
 ▶ **Play now:** https://mrratburnfailedme.github.io/dino-muncher/
 

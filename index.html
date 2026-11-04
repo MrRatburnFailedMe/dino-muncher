@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Dino Muncher</title>
-<meta name="description" content="A goofy low-poly multiplayer dinosaur game: eat the city, or save it.">
+<title>Cops vs Dino</title>
+<meta name="description" content="Cops vs Dino: smash the city as a giant dinosaur, or stop it as a cop. A free low-poly multiplayer browser game.">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -229,7 +229,7 @@ canvas{display:block;touch-action:none;outline:none;}
 .card[aria-pressed="true"] .ct{color:var(--gold);}
 .card .cd2{padding:0 14px;font-size:12.5px;font-weight:800;line-height:1.35;color:var(--ink-dim);}
 .card[aria-pressed="true"]::after{content:"SELECTED";position:absolute;top:10px;right:10px;padding:3px 8px;border-radius:999px;background:var(--gold);color:#2a1d05;font:900 9.5px var(--body);letter-spacing:.14em;}
-#skins{grid-template-columns:repeat(10,1fr);gap:6px;}
+#skins{grid-template-columns:repeat(11,1fr);gap:6px;}
 #skins .skin{padding:6px 0;} #skins .skin span{display:none;} #skins .skin i{width:26px;height:26px;}
 .btn.play{align-self:stretch;justify-self:stretch;width:100%;font-size:32px;padding:14px;}
 .srv{margin:-6px 0 0;display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:800;color:var(--ink-dim);}
@@ -362,6 +362,7 @@ canvas{display:block;touch-action:none;outline:none;}
 .tbadges span{padding:4px 11px;border-radius:999px;background:rgba(255,201,63,.12);border:1px solid rgba(255,201,63,.4);font:900 10.5px var(--body);letter-spacing:.16em;color:var(--gold);}
 #title .card .av{aspect-ratio:auto;height:clamp(84px,16vh,132px);overflow:hidden;}
 #title .card .av img{height:100%;width:auto;max-width:94%;}
+#title .card .av{display:flex;align-items:center;justify-content:center;}
 #title .card .cd2{font-size:12px;}
 .playrow{display:grid;grid-template-columns:1.55fr 1fr;gap:12px;}
 .playrow .btn{width:100%;margin:0;}
@@ -378,6 +379,9 @@ canvas{display:block;touch-action:none;outline:none;}
 #whatsnew li b{display:inline-grid;place-items:center;flex:none;width:26px;height:26px;border-radius:8px;background:rgba(255,201,63,.18);color:var(--gold);font:900 13px var(--body);}
 @media (max-width:980px){#whatsnew{display:none;}}
 @media (max-height:720px){#title .card .cd2{display:none;} #title .card .av{height:76px;}}
+@media (max-width:1100px){#destroy .dbar{width:80px;} #destroy span{font-size:8.5px;letter-spacing:.1em;} #destroy b{font-size:15px;min-width:38px;}}
+@media (max-height:560px){#hp{width:96px;height:96px;} #hpTxt{font-size:22px;} .slot{width:48px;height:48px;} .slot svg{width:22px;height:22px;} #minimap{width:130px;height:90px;} #roster{width:200px;padding:7px 10px;} #hint{bottom:calc(76px + env(safe-area-inset-bottom,0px));font-size:12px;}}
+@media (max-height:620px){.tleft{gap:7px;padding-block:10px;} #title .tleft .logo{font-size:40px;} #title .card .av{height:50px;} #title .cards{gap:8px;} #skins .skin{padding:3px 0;} #skins .skin i{width:20px;height:20px;} .field label{font-size:9.5px;} .tag{font-size:13px;margin:0;} .tbadges{display:none;} #title .card .av{height:58px;} .card .ct{font-size:18px;} .field{gap:4px;} #nick{height:36px;} .btn.big{font-size:22px;padding-block:9px;} .playrow .btn small{font-size:9px;} .credits{display:none;}}
 </style>
 
 <div id="app"></div>
@@ -417,8 +421,8 @@ canvas{display:block;touch-action:none;outline:none;}
 <div id="waterTint"></div>
 <div id="title" class="overlay">
   <div class="tleft">
-    <h1 class="logo">Dino<span>Muncher</span></h1>
-    <p class="tag">Pick a side. Eat the city, or save it.</p>
+    <h1 class="logo">Cops<span>vs Dino</span></h1>
+    <p class="tag">Smash the city as a giant dino, or stop it as a cop.</p>
     <div class="tbadges"><span>MULTIPLAYER</span><span>FREE</span><span>NO DOWNLOAD</span></div>
     <div class="cards" role="group" aria-label="Choose your side">
       <button class="card dino" type="button" data-role="dino" aria-pressed="true"><span class="av"><img data-av="dino" alt=""></span><span class="ct">Dinosaur</span><span class="cd2">Eat everything, grow huge, wreck the cities and fight other dinos.</span></button>
@@ -427,15 +431,13 @@ canvas{display:block;touch-action:none;outline:none;}
     <div class="field"><label for="nick">YOUR NAME</label><input id="nick" maxlength="14" autocomplete="off" spellcheck="false"></div>
     <div class="field" id="skinField"><label>DINO COLOUR</label><div id="skins"></div></div>
     <div class="playrow"><button class="btn big play" id="joinBtn">Play</button><button class="btn big" id="tutBtn" type="button">Tutorial<small>NEW? START HERE</small></button></div>
-    <p class="srv"><i></i>Joins a random open server · up to 8 players</p>
-    <p class="credits">Jet: <a href="https://skfb.ly/oUBCR" target="_blank" rel="noopener">"Low poly F14 Tomcat"</a> by SIpriv, <a href="http://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>
+    <p class="credits">Jet: "Low poly F14 Tomcat" (skfb.ly/oUBCR) by SIpriv, CC BY 4.0</p>
   </div>
-  <aside id="whatsnew" class="glass"><span class="ver">UPDATE 22</span><h3>What's new</h3><ul><li><b>?</b>Mystery power-up boxes</li><li><b>T</b>Drive tanks, fly fighter jets</li><li><b>!</b>Smashable missile launchers</li><li><b>Q</b>Earthquakes and tail whips</li><li><b>♪</b>Background music and police sirens</li></ul></aside>
 </div>
 
 <div id="menu" class="overlay" hidden>
   <div class="join">
-    <h1 class="logo">Dino<span>Muncher</span></h1>
+    <h1 class="logo">Cops<span>vs Dino</span></h1>
     <div class="jstatus" id="jstatus"><span class="spin"></span><span id="joinTxt">Loading animals…</span></div>
     <div class="jbar"><span id="joinFill"></span></div>
     <div class="jinfo">
@@ -751,6 +753,7 @@ const LOOKS=[
   {name:'Toxic',body:'#6fc23f',belly:'#3d6b22',spike:'#b34ad3'},
   {name:'Albino',body:'#e8e2d6',belly:'#b8ae9c',spike:'#e9a7a7'},
   {name:'Shadow',body:'#2b2b30',belly:'#18181c',spike:'#c0392b',stripes:true},
+  {name:'Blue',body:'#2c6fe0',belly:'#a9d0ff',spike:'#173a8a',stripes:true},
 ];
 const RAPTOR_LOOK={body:'#4f8fe0',belly:'#d6e8ff',spike:'#27468f',slim:true,tail:1.35,stripes:true};
 const BIGREX_LOOK={body:'#d0603f',belly:'#f6d6ab',spike:'#7a2a1d'};
@@ -928,7 +931,7 @@ const SPECIES=[
   {id:'king',dino:true,name:'Dino King',model:'Trex',tint:{body:'#4a2f7a',belly:'#d9b84a'},size:18,count:1,speed:3.0,aggro:34,chase:15,dmg:48,color:'#5a3a8f',build:()=>buildRex(KING_LOOK)},
 ];
 // dinos are slower than people: a baby is slower than a cop on foot, a World Eater slower than a police car
-const dinoSpeed=()=>3.96+79.2*Math.pow(clamp(Math.log(Math.max(1,P.size))/Math.log(70),0,1),1.3);
+const dinoSpeed=()=>7.5+75.7*Math.pow(clamp(Math.log(Math.max(1,P.size))/Math.log(70),0,1),1.3);
 // dinos are 2.5x as tough as they used to be, so humans have to work for a kill
 const DINO_HP=250;
 // more forest critters (unit size, facing +z, feet at y=0)
@@ -2886,13 +2889,14 @@ const Snd={ctx:null,master:null,userMuted:false,sdkMuted:false,
 
 /* ================= player ================= */
 const P={x:0,y:0,z:0,vx:0,vy:0,vz:0,h:0,mass:1,size:1,vis:1,maxSize:1,hp:250,maxHp:250,air:5,jumped:false,snareT:0,sleepT:0,burnT:0,onGround:true,inv:0,lastHit:-99,alive:true,eaten:0,score:0,stage:0,jawT:0,squash:0,phase:0,dieT:0,killer:'',wantJaw:0};
-let myLook=clamp(parseInt(store.get('dm_color')||'0',10)||0,0,LOOKS.length-1),myName=(store.get('dm_name')||'').slice(0,14),myLife=0;
+let myLook=clamp(parseInt(store.get('dm_color')||String(LOOKS.length-1),10)||0,0,LOOKS.length-1),myName=(store.get('dm_name')||'').slice(0,14),myLife=0;
 const buildPlayerRig=look=>(models.Trex&&buildPack('Trex',look))||buildRex(look);
 let prig=buildRex(LOOKS[myLook]); scene.add(prig.root);
 function setLook(i){myLook=i; scene.remove(prig.root); prig=buildPlayerRig(LOOKS[i]); scene.add(prig.root); prig.root.position.set(P.x,P.y,P.z); prig.root.rotation.y=P.h; prig.root.scale.setScalar(P.vis);}
+const SPAWN=[190,-32];
 function resetPlayer(){
-  Object.assign(P,{x:0,z:0,vx:0,vy:0,vz:0,h:Math.PI*0.75,mass:1,size:1,vis:1,maxSize:1,hp:250,maxHp:250,air:5,jumped:false,snareT:0,sleepT:0,burnT:0,onGround:true,legT:0,climbing:false,pitchS:0,headYaw:0,grabDip:0,inv:3,lastHit:-99,alive:true,eaten:0,score:0,stage:0,jawT:0,squash:0,phase:0,dieT:0,killer:''});
-  P.y=groundH(0,0); prig.root.rotation.set(0,P.h,0); prig.root.visible=true;
+  Object.assign(P,{x:SPAWN[0],z:SPAWN[1],vx:0,vy:0,vz:0,h:Math.atan2(415-SPAWN[0],-14-SPAWN[1]),mass:1,size:1,vis:1,maxSize:1,hp:250,maxHp:250,air:5,jumped:false,snareT:0,sleepT:0,burnT:0,onGround:true,legT:0,climbing:false,pitchS:0,headYaw:0,grabDip:0,inv:3,lastHit:-99,alive:true,eaten:0,score:0,stage:0,jawT:0,squash:0,phase:0,dieT:0,killer:''});
+  P.y=groundH(SPAWN[0],SPAWN[1]); prig.root.rotation.set(0,P.h,0); prig.root.visible=true;
 }
 resetPlayer();
 const canEatSize=s=>P.size>s*EAT_RATIO;
@@ -3650,7 +3654,7 @@ function updateRope(){
 /* ================= eating & damage ================= */
 const YUM=['CHOMP!','MUNCH!','YUM!','GULP!','NOM!','CRUNCH!'];
 function gain(sz){
-  const eff=clamp(sz/(P.size*0.3),0.06,1),g=1.0*sz*sz*eff;
+  const eff=clamp(sz/(P.size*0.3),0.06,1),g=1.0*sz*sz*eff*(P.size<4.4?1.6:1);
   P.mass+=g; P.size=Math.sqrt(P.mass); P.maxSize=Math.max(P.maxSize,P.size);
   // max health grows with size so a big dino can soak up police fire
   const oldMax=P.maxHp; P.maxHp=DINO_HP*Math.pow(P.size,0.9); P.hp+=(P.maxHp-oldMax)*0.5;
@@ -3826,8 +3830,8 @@ function updateMinis(dt){
     scene.remove(m.g); minis.splice(i,1);
   }
 }
-const BLOOD=['#a3121a','#c21d24','#7d0d12'];
-function splat(x,z,r){crater(x,z,r,'#6e0d10');}
+const BLOOD=['#fff4c2','#ffd76a','#ffffff'];
+function splat(x,z,r){}
 function hitFx(kind,dmg){
   if(!P.alive) return;
   if(role!=='dino'){burst(P.x,P.y+1.2,P.z,pickM(BLOOD),kind==='bullet'?3:12,0.6,4,3); if(kind!=='bullet') Snd.impact(0.7); return;}
@@ -3885,7 +3889,7 @@ function updateHitFx(dt){
   }
   if(P.legT>-0.6){
     const was=P.legT; P.legT-=dt;
-    if(was>0&&P.legT<=0){floatText('Leg grew back!',P.x,P.y+P.vis*2,P.z,'#7dff7a',26); burst(P.x,P.y+P.vis*0.3,P.z,'#7dff7a',14,Math.max(0.6,P.vis*0.4),5,5);}
+    if(was>0&&P.legT<=0&&state==='play'){floatText('Leg grew back!',P.x,P.y+P.vis*2,P.z,'#7dff7a',26); burst(P.x,P.y+P.vis*0.3,P.z,'#7dff7a',14,Math.max(0.6,P.vis*0.4),5,5);}
   }
 }
 function biteFrom(e){
@@ -4528,9 +4532,10 @@ function setRole(r){
 
 /* ================= input ================= */
 const keys={}; let jumpQueued=false,jumpReady=0;
+function keyOf(ev){const c=ev.code||''; if(/^Key[A-Z]$/.test(c)) return c.slice(3).toLowerCase(); if(/^Digit\d$/.test(c)) return c.slice(5); if(c==='Space') return ' '; return (ev.key||'').toLowerCase();}
 addEventListener('keydown',ev=>{
   if(ev.target&&ev.target.tagName==='INPUT'&&ev.target.type!=='range') return;
-  const k=ev.key.toLowerCase();
+  const k=keyOf(ev);
   if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) ev.preventDefault();
   if(k===' '&&!keys[' ']) jumpQueued=true;
   if(!keys[k]&&role==='human'&&state==='play'){if(k==='f'){if(H.flying) H.wantRocket=true; else toggleJet();} if(k==='r'&&!H.flying) H.wantRocket=true; if(k==='e'){if(H.flying) ejectJet(); else toggleCar();} if(k==='c') summonCar(); if(k>='1'&&k<='4') selectGun(+k-1);}
@@ -4540,7 +4545,7 @@ addEventListener('keydown',ev=>{
   if(k==='enter'&&state==='dead') startGame();
   keys[k]=true;
 });
-addEventListener('keyup',ev=>{keys[ev.key.toLowerCase()]=false;});
+addEventListener('keyup',ev=>{keys[keyOf(ev)]=false;});
 addEventListener('blur',()=>{for(const k in keys) keys[k]=false;});
 let camYaw=0,camPitch=0.3,zoom=1,lastWheel=-9;
 const cv=renderer.domElement,drag={id:null,x:0,y:0};
@@ -4573,15 +4578,23 @@ stick.addEventListener('pointerup',endJoy); stick.addEventListener('pointercance
 document.getElementById('jumpBtn').addEventListener('pointerdown',ev=>{ev.preventDefault(); jumpQueued=true;});
 document.getElementById('biteBtn').addEventListener('pointerdown',ev=>{ev.preventDefault(); if(role==='human'){H.trigger=true; H.triggerNew=true;} else snapBite();});
 document.getElementById('biteBtn').addEventListener('pointerup',()=>{H.trigger=false;});
+// on CrazyGames players land straight in the game; ?autostart does the same for testing
+const CG={on:/crazygames/i.test(location.hostname)||/crazygames/i.test(document.referrer)||/[?&]autostart\b/.test(location.search),sdk:null,loaded:false,loadingOpen:false,playing:false};
+function cgEvent(name){try{if(CG.sdk) CG.sdk.game[name]();}catch(e){}}
+// gameplay counts only while you're actually playing: not on menus, the death screen or a hidden tab
+setInterval(()=>{const p=state==='play'&&P.alive&&!document.hidden; if(p!==CG.playing){CG.playing=p; cgEvent(p?'gameplayStart':'gameplayStop');}},400);
 function toggleMute(){Snd.muted=!Snd.userMuted; Snd.applyMute(); if(Snd.sdkMuted) banner('Sound is muted in your CrazyGames settings',1800);}
 /* ================= CrazyGames SDK: follow the site's mute setting (skipped inside Claude) ================= */
 if(!(window.claude&&typeof window.claude.use==='function')){
-  const sdkTag=document.createElement('script'); sdkTag.src='https://sdk.crazygames.com/crazygames-sdk-v3.js';
+  const sdkTag=document.createElement('script'); window.__cgLoading=true; sdkTag.src='https://sdk.crazygames.com/crazygames-sdk-v3.js';
   sdkTag.onload=async()=>{
     try{
       const sdk=window.CrazyGames.SDK; await sdk.init();
       const apply=st=>{Snd.sdkMuted=!!(st&&st.muteAudio); Snd.applyMute();};
       apply(sdk.game.settings); sdk.game.addSettingsChangeListener(apply);
+      CG.sdk=sdk; if(sdk.environment==='crazygames') CG.on=true;
+      if(!CG.loaded){try{sdk.game.loadingStart();}catch(e){} CG.loadingOpen=true;}
+      if(CG.on) quickStart();
     }catch(e){console.warn('CrazyGames SDK unavailable',e);}
   };
   document.head.appendChild(sdkTag);
@@ -4748,7 +4761,7 @@ function updateCamera(dt){
   else{
     if(drag.id===null&&clock-lastDrag>2.5){lookOff=lerp(lookOff,0,damp(3,dt)); camPitch=lerp(camPitch,0.3,damp(3,dt)); if(clock-lastWheel>2.5) zoom=lerp(zoom,1,damp(2,dt));}
     camYaw=angLerp(camYaw,P.h+Math.PI+lookOff,damp(drag.id!==null?25:5,dt));
-    dist=(10+vis*4.4)*zoom;
+    dist=(4.5+vis*4.9)*zoom;
   }
   camTarget.set(P.x,P.y+vis*(titleMode&&state==='menu'?0.7:1.0),P.z);
   camPos.set(P.x+Math.sin(camYaw)*Math.cos(camPitch)*dist,camTarget.y+Math.sin(camPitch)*dist+(titleMode&&state==='menu'?0.3:1.5),P.z+Math.cos(camYaw)*Math.cos(camPitch)*dist);
@@ -5020,7 +5033,18 @@ const unlockAudio=()=>{Snd.init(); if(Snd.ctx&&Snd.ctx.state==='suspended') Snd.
 addEventListener('pointerdown',unlockAudio); addEventListener('keydown',unlockAudio);
 // animals start loading right away so Join is quick
 Snd.preload();
-const modelsReady=loadModels((d,t)=>{lastProg=[d,t]; if(!menuEl.hidden) setJoin(`Loading animals ${d}/${t}`,0.04+0.56*d/t);}).then(()=>{spawnCreatures(); spawned=true; setLook(myLook); renderAvatars();});
+let quickStarted=false;
+async function quickStart(){
+  if(quickStarted||!titleMode||state!=='menu') return; quickStarted=true;
+  myName=cleanName(myName); titleMode=false; titleEl.hidden=true; menuEl.hidden=false;
+  $('joinName').textContent=myName; $('joinDot').style.background=LOOKS[myLook].body;
+  setJoin(spawned?'Animals ready':`Loading animals ${lastProg[0]}/${lastProg[1]}`,spawned?0.6:0.04+0.56*lastProg[0]/lastProg[1]);
+  await modelsReady; ready=true; startGame();
+  // look for other players in the background instead of making you wait
+  if(!joined){joined=true; await connectServer(); if(mp&&mpState!=='solo') sendPresence(true);}
+}
+const modelsReady=loadModels((d,t)=>{lastProg=[d,t]; if(!menuEl.hidden) setJoin(`Loading animals ${d}/${t}`,0.04+0.56*d/t);}).then(()=>{spawnCreatures(); spawned=true; setLook(myLook); renderAvatars(); CG.loaded=true; if(CG.loadingOpen){CG.loadingOpen=false; cgEvent('loadingStop');}});
+if(CG.on) quickStart();
 function startGame(){
   if(!ready) return;
   clearTimeout(respawnTimer);
@@ -5050,6 +5074,7 @@ function startGame(){
   const hint=$('hint'); hint.innerHTML=role==='human'?'<kbd>W</kbd><kbd>S</kbd> drive · <kbd>A</kbd><kbd>D</kbd> steer · aim with the mouse, click to shoot · <kbd>1</kbd>-<kbd>4</kbd> guns · <kbd>E</kbd> car/tank · <kbd>C</kbd> new car · <kbd>R</kbd> rocket · <kbd>F</kbd> jet/missiles · <kbd>E</kbd> bail':'<kbd>W</kbd><kbd>S</kbd> move · <kbd>A</kbd><kbd>D</kbd> turn · <kbd>Space</kbd> jump · drag to look · <kbd>V</kbd> first person'; hint.hidden=false; hint.style.opacity='1'; setTimeout(()=>hint.style.opacity='0',9000);
   camYaw=P.h+Math.PI; camPitch=0.3; lookOff=0;
   banner(role==='human'?'Hunt dinos! Aim the circle and click to shoot':'Eat anything with a green arrow!',2600);
+  if(role==='dino'&&myLife===1) setTimeout(()=>{if(state==='play'&&role==='dino'&&P.alive&&P.size<4.4) banner('Grow big, then raid the city. The cops will come for you!',3200);},16000);
   sendPresence(true);
 }
 async function joinGame(){
