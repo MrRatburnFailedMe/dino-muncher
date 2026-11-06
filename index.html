@@ -382,6 +382,15 @@ canvas{display:block;touch-action:none;outline:none;}
 @media (max-width:1100px){#destroy .dbar{width:80px;} #destroy span{font-size:8.5px;letter-spacing:.1em;} #destroy b{font-size:15px;min-width:38px;}}
 @media (max-height:560px){#hp{width:96px;height:96px;} #hpTxt{font-size:22px;} .slot{width:48px;height:48px;} .slot svg{width:22px;height:22px;} #minimap{width:130px;height:90px;} #roster{width:200px;padding:7px 10px;} #hint{bottom:calc(76px + env(safe-area-inset-bottom,0px));font-size:12px;}}
 @media (max-height:620px){.tleft{gap:7px;padding-block:10px;} #title .tleft .logo{font-size:40px;} #title .card .av{height:50px;} #title .cards{gap:8px;} #skins .skin{padding:3px 0;} #skins .skin i{width:20px;height:20px;} .field label{font-size:9.5px;} .tag{font-size:13px;margin:0;} .tbadges{display:none;} #title .card .av{height:58px;} .card .ct{font-size:18px;} .field{gap:4px;} #nick{height:36px;} .btn.big{font-size:22px;padding-block:9px;} .playrow .btn small{font-size:9px;} .credits{display:none;}}
+#goals{position:fixed;left:max(16px,env(safe-area-inset-left,0px));top:calc(50% - 40px);padding:9px 13px 10px;border-radius:12px;pointer-events:none;min-width:200px;transition:opacity .6s;}
+#goals h4{margin:0 0 5px;font:400 14px var(--display);letter-spacing:.08em;color:var(--gold);}
+#goals ul{margin:0;padding:0;display:grid;gap:5px;}
+#goals li{list-style:none;display:flex;gap:8px;align-items:center;font:800 12.5px var(--body);color:var(--ink);}
+#goals li i{flex:none;width:13px;height:13px;border-radius:4px;border:2px solid rgba(255,255,255,.55);}
+#goals li.done{color:var(--ink-dim);text-decoration:line-through;}
+#goals li.done i{background:var(--hp-good);border-color:var(--hp-good);}
+#goals li.next{color:#fff;}
+@media (max-height:560px){#goals{top:calc(50% - 30px);min-width:170px;padding:7px 10px;} #goals li{font-size:11px;gap:6px;}}
 </style>
 
 <div id="app"></div>
@@ -398,6 +407,7 @@ canvas{display:block;touch-action:none;outline:none;}
   <div class="stat"><small>SCORE</small><b id="scoreTxt">0</b></div>
   <div class="stat"><small id="st3">MUNCHED</small><b id="eatTxt">0</b></div>
 </div>
+<div id="goals" class="glass" hidden><h4>GOALS</h4><ul id="goalList"></ul></div>
 <div id="destroy" class="glass" hidden><span>DINO DESTRUCTION</span><div class="dbar"><i id="destroyFill"></i></div><b id="destroyPct">0%</b></div>
 <div id="alert" class="glass" hidden><span class="lights"><i></i><i></i></span><span id="alertTxt">POLICE</span><span id="stars"></span></div>
 <div id="dinoArea" class="glass" hidden><span class="da-ic"></span><span id="daTxt">DINOS NEARBY</span><b id="daN">0</b></div>
@@ -2818,7 +2828,7 @@ const Snd={ctx:null,master:null,userMuted:false,sdkMuted:false,
   // recorded clips (roar, footsteps, missile blast) ship as base64 text like the models
   raw:{},bufs:{},lastStep:-1,roarSrc:null,
   async preload(){
-    await Promise.all(['roarc','boomc','step0','step1','step2','step3','akshot','sgshot','sgload','crumble','bite','chewing','swallow','pshot','quakec','whip'].map(async n=>{
+    await Promise.all(['roarc','boomc','step0','step1','step2','step3','akshot','sgshot','sgload','crumble','bite','chewing','swallow','quakec','whip'].map(async n=>{
       try{const bin=atob((await (await fetch('sounds/'+n+'.txt')).text()).replace(/\s+/g,'')),u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); this.raw[n]=u.buffer;}catch(e){console.warn('Could not load sound',n,e);}
     }));
     this.decodeAll();
@@ -2895,8 +2905,8 @@ let prig=buildRex(LOOKS[myLook]); scene.add(prig.root);
 function setLook(i){myLook=i; scene.remove(prig.root); prig=buildPlayerRig(LOOKS[i]); scene.add(prig.root); prig.root.position.set(P.x,P.y,P.z); prig.root.rotation.y=P.h; prig.root.scale.setScalar(P.vis);}
 const SPAWN=[190,-32];
 function resetPlayer(){
-  Object.assign(P,{x:SPAWN[0],z:SPAWN[1],vx:0,vy:0,vz:0,h:Math.atan2(415-SPAWN[0],-14-SPAWN[1]),mass:1,size:1,vis:1,maxSize:1,hp:250,maxHp:250,air:5,jumped:false,snareT:0,sleepT:0,burnT:0,onGround:true,legT:0,climbing:false,pitchS:0,headYaw:0,grabDip:0,inv:3,lastHit:-99,alive:true,eaten:0,score:0,stage:0,jawT:0,squash:0,phase:0,dieT:0,killer:''});
-  P.y=groundH(SPAWN[0],SPAWN[1]); prig.root.rotation.set(0,P.h,0); prig.root.visible=true;
+  Object.assign(P,{x:SPAWN[0]+RR(-9,9),z:SPAWN[1]+RR(-9,9),vx:0,vy:0,vz:0,h:Math.atan2(415-SPAWN[0],-14-SPAWN[1]),mass:1,size:1,vis:1,maxSize:1,hp:250,maxHp:250,air:5,jumped:false,snareT:0,sleepT:0,burnT:0,onGround:true,legT:0,climbing:false,pitchS:0,headYaw:0,grabDip:0,inv:3,lastHit:-99,alive:true,eaten:0,score:0,stage:0,jawT:0,squash:0,phase:0,dieT:0,killer:''});
+  P.y=groundH(P.x,P.z); prig.root.rotation.set(0,P.h,0); prig.root.visible=true;
 }
 resetPlayer();
 const canEatSize=s=>P.size>s*EAT_RATIO;
@@ -4579,12 +4589,20 @@ document.getElementById('jumpBtn').addEventListener('pointerdown',ev=>{ev.preven
 document.getElementById('biteBtn').addEventListener('pointerdown',ev=>{ev.preventDefault(); if(role==='human'){H.trigger=true; H.triggerNew=true;} else snapBite();});
 document.getElementById('biteBtn').addEventListener('pointerup',()=>{H.trigger=false;});
 // on CrazyGames players land straight in the game; ?autostart does the same for testing
-const CG={on:/crazygames/i.test(location.hostname)||/crazygames/i.test(document.referrer)||/[?&]autostart\b/.test(location.search),sdk:null,loaded:false,loadingOpen:false,playing:false};
+const CG={readyP:null,ready:null,room:null,on:/crazygames/i.test(location.hostname)||/crazygames/i.test(document.referrer)||/[?&]autostart\b/.test(location.search),sdk:null,loaded:false,loadingOpen:false,playing:false};
+CG.readyP=new Promise(r=>{CG.ready=r; setTimeout(r,4000);});
+// tell CrazyGames which room you're in, so friends can join you from the site
+function cgRoom(id){CG.room=id; try{if(CG.sdk) CG.sdk.game.updateRoom({roomId:id,isJoinable:true,inviteParams:{room:id}});}catch(e){}}
+// the room CrazyGames wants: a friend's invite, or a fresh private party for instant multiplayer
+function cgWantedRoom(){if(!CG.sdk) return null; try{const r=CG.sdk.game.getInviteParam('room'); if(r) return String(r).replace(/[^a-z0-9-]/gi,'').slice(0,24)||null; if(CG.sdk.game.isInstantMultiplayer) return 'party-'+Math.random().toString(36).slice(2,8);}catch(e){} return null;}
+// show your CrazyGames name when you're logged in
+function cgUseName(u){if(!u||!u.username) return; myName=cleanName(u.username); nick.value=myName; $('joinName').textContent=myName; sendPresence(true); renderRoster();}
 function cgEvent(name){try{if(CG.sdk) CG.sdk.game[name]();}catch(e){}}
 // gameplay counts only while you're actually playing: not on menus, the death screen or a hidden tab
 setInterval(()=>{const p=state==='play'&&P.alive&&!document.hidden; if(p!==CG.playing){CG.playing=p; cgEvent(p?'gameplayStart':'gameplayStop');}},400);
 function toggleMute(){Snd.muted=!Snd.userMuted; Snd.applyMute(); if(Snd.sdkMuted) banner('Sound is muted in your CrazyGames settings',1800);}
 /* ================= CrazyGames SDK: follow the site's mute setting (skipped inside Claude) ================= */
+if(window.claude&&typeof window.claude.use==='function') CG.ready();
 if(!(window.claude&&typeof window.claude.use==='function')){
   const sdkTag=document.createElement('script'); window.__cgLoading=true; sdkTag.src='https://sdk.crazygames.com/crazygames-sdk-v3.js';
   sdkTag.onload=async()=>{
@@ -4593,10 +4611,14 @@ if(!(window.claude&&typeof window.claude.use==='function')){
       const apply=st=>{Snd.sdkMuted=!!(st&&st.muteAudio); Snd.applyMute();};
       apply(sdk.game.settings); sdk.game.addSettingsChangeListener(apply);
       CG.sdk=sdk; if(sdk.environment==='crazygames') CG.on=true;
+      try{if(sdk.user.isUserAccountAvailable){cgUseName(await sdk.user.getUser()); sdk.user.addAuthListener(cgUseName);}}catch(e){}
+      try{sdk.game.addJoinRoomListener(p=>{const id=p&&(p.room||(p.inviteParams&&p.inviteParams.room)); if(id) switchRoom(String(id));});}catch(e){}
+      CG.ready();
       if(!CG.loaded){try{sdk.game.loadingStart();}catch(e){} CG.loadingOpen=true;}
       if(CG.on) quickStart();
-    }catch(e){console.warn('CrazyGames SDK unavailable',e);}
+    }catch(e){console.warn('CrazyGames SDK unavailable',e); CG.ready();}
   };
+  sdkTag.onerror=()=>CG.ready();
   document.head.appendChild(sdkTag);
 }
 
@@ -4795,7 +4817,7 @@ function updateCamera(dt){
 let room=null,mp=null,mpState='connecting',lastSend=0;
 const peerMap=new Map(),eatenPeers=new Set();
 const BAD_CHARS=new RegExp('['+String.fromCharCode(0)+'-'+String.fromCharCode(31)+String.fromCharCode(127)+'-'+String.fromCharCode(159)+String.fromCharCode(0x200b)+'-'+String.fromCharCode(0x200f)+String.fromCharCode(0x2028)+'-'+String.fromCharCode(0x202e)+String.fromCharCode(0x2060)+'-'+String.fromCharCode(0x206f)+String.fromCharCode(0xfeff)+']','g');
-function cleanName(s){return String(s||'').replace(BAD_CHARS,'').trim().slice(0,14)||'Dino';}
+function cleanName(s){return String(s||'').replace(BAD_CHARS,'').trim().slice(0,20)||'Dino';}
 function num(v,d=0){v=Number(v); return Number.isFinite(v)?v:d;}
 function makeTag(text,col){
   const c=document.createElement('canvas'); c.width=320; c.height=80; const g=c.getContext('2d');
@@ -4863,22 +4885,31 @@ async function webRooms(){
     return {presence(o){last=o; try{act.send(o);}catch(e){} return Promise.resolve();},onPeers(f){cb=f;},onConnection(f){f(true);},connected:()=>true,peers:()=>[...peers.values()],leave(){rm.leave(); return Promise.resolve();}};
   }};
 }
+// move to another room mid-game (a friend accepted from the CrazyGames site) without reloading
+async function switchRoom(id){
+  if(!id||id===CG.room||!room) return;
+  const m=/^server-(\d+)$/.exec(id),name=m?'dino-server-'+m[1]:'dino-room-'+id;
+  try{if(mp) await mp.leave();}catch(e){} for(const k of [...peerMap.keys()]) removePeer(k); mp=null;
+  try{mp=await room.join(name); serverName=m?'Server '+m[1]:'Friends'; wirePeers(); cgRoom(id); banner('You joined your friend!',2200);}catch(e){setMp('solo');}
+}
 async function connectServer(){
   try{
     const web=!window.claude||typeof window.claude.use!=='function';
     room=web?await webRooms():await window.claude.use('room');
     if(!room){setMp('solo'); return;}
+    await CG.readyP; let want=cgWantedRoom(); if(want&&/^server-\d+$/.test(want)){const i=+want.slice(7); if(i>=1&&i<=SERVERS){try{mp=await room.join('dino-server-'+i); serverName='Server '+i; wirePeers(); cgRoom(want); return;}catch(e){mp=null;}} want=null;}
+    if(want){try{mp=await room.join('dino-room-'+want); serverName=want.startsWith('party')?'Party':'Friends'; wirePeers(); cgRoom(want); return;}catch(e){mp=null;}}
     // on the website, servers fill up in order so friends who press Play land together
     const order=[...Array(SERVERS)].map((_,i)=>i+1); if(!web) order.sort(()=>Math.random()-0.5);
     for(let n=0;n<SERVERS;n++){const i=order[n];
       setJoin(`Joining Server ${i}…`,0.68+i*0.04);
       let r; try{r=await room.join('dino-server-'+i);}catch(e){break;}
       await new Promise(res=>setTimeout(res,web?3500:1200));
-      if(r.peers().filter(p=>!p.sameTab&&p.kind==='viewer').length<SERVER_CAP||n===SERVERS-1){mp=r; serverName='Server '+i; break;}
+      if(r.peers().filter(p=>!p.sameTab&&p.kind==='viewer').length<SERVER_CAP||n===SERVERS-1){mp=r; serverName='Server '+i; CG.room='server-'+i; break;}
       try{await r.leave();}catch(e){}
     }
     if(!mp){if(web){setMp('solo'); return;} mp=room; serverName='Lobby';}
-    wirePeers();
+    wirePeers(); if(CG.room) cgRoom(CG.room);
   }catch(e){setMp('solo');}
 }
 function setMp(s){
@@ -4914,7 +4945,7 @@ function updatePeers(dt){
       else {if(pe.jet) pe.jet.root.visible=false; pe.phase+=pe.m*dt*1.6; const sw=Math.sin(pe.phase)*Math.min(1,pe.m/5)*0.8; pe.rig.legs[0].rotation.x=sw; pe.rig.legs[1].rotation.x=-sw; pe.rig.arms[1].rotation.x=-Math.PI/2;}
       if(!pe.cr&&pe.car) pe.car.root.visible=false;
       r.position.set(pe.x,pe.y,pe.z); r.rotation.y=pe.h; r.scale.setScalar(1);
-      if(pe.tag){pe.tag.position.set(pe.x,pe.y+(pe.fl?6:2.8),pe.z); const ts=1.4+Math.hypot(camera.position.x-pe.x,camera.position.z-pe.z)*0.012; pe.tag.scale.set(ts*4,ts,1);}
+      if(pe.tag){pe.tag.position.set(pe.x,pe.y+(pe.fl?6:2.8),pe.z); const ts=Math.max(0.3,camera.position.distanceTo(pe.tag.position)*0.042); pe.tag.scale.set(ts*4,ts,1);}
       if(playing&&role==='human'&&!H.inCar&&!H.flying&&pe.cr&&pe.m>7&&P.inv<=0&&Math.hypot(pe.x-P.x,pe.z-P.z)<2.6) die(pe.name+' (ran you over)');
       if(!playing||role!=='dino'||pe.fl) continue;
       const dh=Math.hypot(pe.x-P.x,pe.z-P.z);
@@ -4933,7 +4964,7 @@ function updatePeers(dt){
       pe.rig.jaw.rotation.x=lerp(pe.rig.jaw.rotation.x,pe.j?0.5:0.03,damp(14,dt));
     }
     r.position.set(pe.x,pe.y,pe.z); r.rotation.y=pe.h; r.scale.setScalar(pe.vis);
-    if(pe.tag){pe.tag.position.set(pe.x,pe.y+pe.vis*1.55+0.8,pe.z); const ts=1.6+pe.vis*0.35+Math.hypot(camera.position.x-pe.x,camera.position.z-pe.z)*0.012; pe.tag.scale.set(ts*4,ts,1);}
+    if(pe.tag){pe.tag.position.set(pe.x,pe.y+pe.vis*1.55+0.8,pe.z); const ts=Math.max(0.3,camera.position.distanceTo(pe.tag.position)*0.042); pe.tag.scale.set(ts*4,ts,1);}
     const d=Math.hypot(pe.x-P.x,pe.z-P.z);
     const kind=P.size>pe.s*EAT_RATIO?'eat':pe.s>P.size*EAT_RATIO?'danger':'big';
     if(state!=='menu'&&d<40+P.size*5) mark(pe.x,pe.y+0.1,pe.z,pe.vis*1.05,kind,pe.y+pe.vis*1.3,d);
@@ -5033,7 +5064,7 @@ const unlockAudio=()=>{Snd.init(); if(Snd.ctx&&Snd.ctx.state==='suspended') Snd.
 addEventListener('pointerdown',unlockAudio); addEventListener('keydown',unlockAudio);
 // animals start loading right away so Join is quick
 Snd.preload();
-let quickStarted=false;
+let quickStarted=false,startClock=-99;
 async function quickStart(){
   if(quickStarted||!titleMode||state!=='menu') return; quickStarted=true;
   myName=cleanName(myName); titleMode=false; titleEl.hidden=true; menuEl.hidden=false;
@@ -5067,7 +5098,7 @@ function startGame(){
   }
   P.inv=3; P.air=5;
   if(role==='human') spawnHumanPlayer(); else {if(H.rig) H.rig.root.visible=false; prig.root.visible=true;}
-  myLife++;
+  myLife++; startClock=clock;
   state='play'; titleMode=false; titleEl.hidden=true; menuEl.hidden=true; overEl.hidden=true;
   for(const id of ['hud','hp','roster','abil','minimap','destroy']) $(id).hidden=false;
   if(isTouch) touchEl.classList.add('on');
@@ -5083,16 +5114,10 @@ async function joinGame(){
   $('joinName').textContent=myName; $('joinDot').style.background=LOOKS[myLook].body;
   setJoin(spawned?'Animals ready':`Loading animals ${lastProg[0]}/${lastProg[1]}`,spawned?0.6:0.04+0.56*lastProg[0]/lastProg[1]);
   await modelsReady;
-  if(!joined){
-    setJoin('Finding a server…',0.66);
-    await Promise.race([connectServer(),new Promise(r=>setTimeout(r,9000))]);
-    joined=true;
-  }
-  const online=mp&&mpState!=='solo',n=online?Math.max(1,mp.peers().length):1;
-  $('joinServer').textContent=online?serverName:'Offline';
-  setJoin(online?`Joined ${serverName} · ${n} dino${n>1?'s':''} here`:'No server found, playing offline',1,true);
+  if(!joined){joined=true; connectServer().then(()=>{if(mp&&mpState!=='solo') sendPresence(true);});}
+  setJoin('Ready!',1,true);
   ready=true;
-  setTimeout(startGame,900);
+  startGame();
 }
 $('joinBtn').addEventListener('click',joinGame);
 nick.addEventListener('keydown',ev=>{if(ev.key==='Enter') joinGame();});
@@ -5127,7 +5152,7 @@ const GUNS=[
 function gunSound(i,dist=0){
   const g=GUNS[i]; if(!g) return Snd.shot(dist);
   const v=clamp(1-dist/220,0.08,1);
-  if(i===0) return Snd.bufs.pshot?Snd.play('pshot',0.75*v,RR(0.96,1.04)):Snd.shot(dist);
+  if(i===0) return Snd.shot(dist);
   if(g.id==='shotgun') return Snd.play('sgshot',0.85*v,RR(0.96,1.04));
   Snd.play('akshot',(g.id==='minigun'?0.4:0.6)*v,(g.id==='mg'?0.9:g.id==='minigun'?1.18:1)*RR(0.97,1.03));
 }
@@ -5545,8 +5570,18 @@ function destructionPct(){
   let s=0; for(const {o,w} of DESTRUCT) s+=w*(o.alive?(o.bitten&&o.top0?clamp(1-o.top/o.top0,0,1):0):1);
   return s/destroyTotal*100;
 }
+// the dino's first goals: each one points at the next thing to try
+const GOALS=[{t:'Eat 5 snacks',ok:()=>P.eaten>=5},{t:'Grow to Little Rex',ok:()=>P.stage>=1},{t:'Get the cops after you',ok:()=>A.police},{t:'Smash part of the city',ok:()=>destructionPct()>0},{t:'Grow to Big Rex',ok:()=>P.stage>=3}];
+const goalDone=GOALS.map(()=>false); let goalsOver=false,goalHtml='';
+function updateGoals(){
+  const el=$('goals'),show=role==='dino'&&state==='play'&&P.alive&&!tutorial&&!goalsOver; el.hidden=!show; if(!show) return;
+  GOALS.forEach((g,i)=>{if(!goalDone[i]&&g.ok()){goalDone[i]=true; floatText('GOAL DONE!',P.x,P.y+P.vis*2,P.z,'#7dff7a',26); Snd.tone(880,0.12,'triangle',0.12); Snd.tone(1320,0.18,'triangle',0.12,null,0.1);}});
+  if(goalDone.every(Boolean)){goalsOver=true; el.hidden=true; banner('All goals done! Now wreck the whole city.',3200); return;}
+  const nx=goalDone.indexOf(false),h=GOALS.map((g,i)=>`<li class="${goalDone[i]?'done':i===nx?'next':''}"><i></i>${g.t}</li>`).join('');
+  if(h!==goalHtml){goalHtml=h; $('goalList').innerHTML=h;}
+}
 function updateDestructionHud(dt){
-  destroyT-=dt; if(destroyT>0) return; destroyT=0.5;
+  destroyT-=dt; if(destroyT>0) return; destroyT=0.5; updateGoals();
   const p=destructionPct(); $('destroyPct').textContent=(p<10?p.toFixed(1):Math.round(p))+'%'; $('destroyFill').style.width=Math.min(100,p)+'%';
 }
 
@@ -6048,7 +6083,7 @@ function spawnPowerup(id){
   const beam=new THREE.Mesh(BEAM_GEO,new THREE.MeshBasicMaterial({color:'#ffd23f',transparent:true,opacity:0.3,depthWrite:false,toneMapped:false})); beam.position.y=72; root.add(beam);
   root.position.set(x,y,z); scene.add(root);
   PU.box={root,box,beam,x,y,z}; PU.id=id;
-  if(state==='play') bigAlert('pu','POWER-UP!','A mystery box appeared on the map. It disappears in 30 seconds');
+  if(state==='play'&&clock-startClock>6) bigAlert('pu','POWER-UP!','A mystery box appeared on the map. It disappears in 30 seconds');
 }
 function removePowerup(){if(!PU.box) return; scene.remove(PU.box.root); PU.box.box.geometry.dispose(); PU.box.box.material.dispose(); PU.box.beam.material.dispose(); PU.box=null; $('puMark').hidden=true;}
 function grabPowerup(){
