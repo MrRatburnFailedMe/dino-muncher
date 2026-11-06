@@ -4595,27 +4595,29 @@ document.getElementById('jumpBtn').addEventListener('pointerdown',ev=>{ev.preven
 document.getElementById('biteBtn').addEventListener('pointerdown',ev=>{ev.preventDefault(); if(role==='human'){H.trigger=true; H.triggerNew=true;} else snapBite();});
 document.getElementById('biteBtn').addEventListener('pointerup',()=>{H.trigger=false;});
 // on CrazyGames players land straight in the game; ?autostart does the same for testing
-const CG={readyP:null,ready:null,room:null,on:/crazygames/i.test(location.hostname)||/crazygames/i.test(document.referrer)||/[?&]autostart\b/.test(location.search),sdk:null,loaded:false,loadingOpen:false,playing:false};
+const CG={readyP:null,ready:null,room:null,want:undefined,link:'',on:/crazygames/i.test(location.hostname)||/crazygames/i.test(document.referrer)||/[?&]autostart\b/.test(location.search)||(window.self!==window.top&&!(window.claude&&typeof window.claude.use==='function')),sdk:null,loaded:false,loadingOpen:false,playing:false};
 CG.readyP=new Promise(r=>{CG.ready=r; setTimeout(r,4000);});
 // tell CrazyGames which room you're in, so friends can join you from the site
-function cgRoom(id){CG.room=id; try{if(CG.sdk) CG.sdk.game.updateRoom({roomId:id,isJoinable:true,inviteParams:{room:id}});}catch(e){}}
+function cgRoom(id){if(!id) return; CG.room=id; try{if(CG.sdk){CG.sdk.game.updateRoom({roomId:id,isJoinable:true,inviteParams:{room:id}}); CG.link=CG.sdk.game.inviteLink({room:id})||'';}}catch(e){}}
+// decide once which room CrazyGames asked for, so a party id isn't re-rolled
+function cgWant(){if(CG.want===undefined) CG.want=cgWantedRoom(); return CG.want;}
 // the room CrazyGames wants: a friend's invite, or a fresh private party for instant multiplayer
 function cgWantedRoom(){if(!CG.sdk) return null; try{const r=CG.sdk.game.getInviteParam('room'); if(r) return String(r).replace(/[^a-z0-9-]/gi,'').slice(0,24)||null; if(CG.sdk.game.isInstantMultiplayer) return 'party-'+Math.random().toString(36).slice(2,8);}catch(e){} return null;}
 // show your CrazyGames name when you're logged in
 function cgUseName(u){if(!u||!u.username) return; myName=cleanName(u.username); nick.value=myName; $('joinName').textContent=myName; sendPresence(true); renderRoster();}
 async function inviteFriends(){
   if(!CG.sdk||!CG.room) return;
-  let link=''; try{link=CG.sdk.game.inviteLink({room:CG.room});}catch(e){}
+  let link=''; try{link=CG.sdk.game.inviteLink({room:CG.room});}catch(e){} if(!link) link=CG.link;
   if(!link){banner('Invites are not available right now',1800); return;}
   let copied=false; try{await navigator.clipboard.writeText(link); copied=true;}catch(e){}
   if(!copied){try{const t=document.createElement('textarea'); t.value=link; t.style.cssText='position:fixed;opacity:0'; document.body.appendChild(t); t.select(); copied=document.execCommand('copy'); t.remove();}catch(e){}}
   banner(copied?'Invite link copied! Send it to a friend to play together':'Invite link: '+link,3000);
 }
 // the button shows while you're in an online room on CrazyGames
-function updateInvite(){const b=$('inviteBtn'); b.hidden=!(CG.sdk&&CG.room&&mp&&mpState!=='solo'&&state==='play'&&!tutorial);}
+function updateInvite(){const b=$('inviteBtn'); b.hidden=!(CG.sdk&&CG.room&&state==='play'&&!tutorial);}
 function cgEvent(name){try{if(CG.sdk) CG.sdk.game[name]();}catch(e){}}
 // gameplay counts only while you're actually playing: not on menus, the death screen or a hidden tab
-setInterval(()=>{const p=state==='play'&&P.alive&&!document.hidden; if(p!==CG.playing){CG.playing=p; cgEvent(p?'gameplayStart':'gameplayStop');}},400);
+setInterval(()=>{const p=!!CG.sdk&&state==='play'&&P.alive&&!document.hidden; if(p!==CG.playing){CG.playing=p; cgEvent(p?'gameplayStart':'gameplayStop');}},400);
 function toggleMute(){Snd.muted=!Snd.userMuted; Snd.applyMute(); if(Snd.sdkMuted) banner('Sound is muted in your CrazyGames settings',1800);}
 /* ================= CrazyGames SDK: follow the site's mute setting (skipped inside Claude) ================= */
 if(window.claude&&typeof window.claude.use==='function') CG.ready();
@@ -4626,7 +4628,7 @@ if(!(window.claude&&typeof window.claude.use==='function')){
       const sdk=window.CrazyGames.SDK; await sdk.init();
       const apply=st=>{Snd.sdkMuted=!!(st&&st.muteAudio); Snd.applyMute();};
       apply(sdk.game.settings); sdk.game.addSettingsChangeListener(apply);
-      CG.sdk=sdk; if(sdk.environment==='crazygames') CG.on=true;
+      CG.sdk=sdk; if(sdk.environment==='crazygames'||(sdk.environment!=='disabled'&&window.self!==window.top)) CG.on=true;
       try{if(sdk.user.isUserAccountAvailable){cgUseName(await sdk.user.getUser()); sdk.user.addAuthListener(cgUseName);}}catch(e){}
       try{sdk.game.addJoinRoomListener(p=>{const id=p&&(p.room||(p.inviteParams&&p.inviteParams.room)); if(id) switchRoom(String(id));});}catch(e){}
       CG.ready();
@@ -4911,21 +4913,23 @@ async function switchRoom(id){
 async function connectServer(){
   try{
     const web=!window.claude||typeof window.claude.use!=='function';
+    await CG.readyP; if(!CG.room) cgRoom(cgWant()||'server-1');
     room=web?await webRooms():await window.claude.use('room');
     if(!room){setMp('solo'); return;}
-    await CG.readyP; let want=cgWantedRoom(); if(want&&/^server-\d+$/.test(want)){const i=+want.slice(7); if(i>=1&&i<=SERVERS){try{mp=await room.join('dino-server-'+i); serverName='Server '+i; wirePeers(); cgRoom(want); return;}catch(e){mp=null;}} want=null;}
+    let want=cgWant(); if(want&&/^server-\d+$/.test(want)){const i=+want.slice(7); if(i>=1&&i<=SERVERS){try{mp=await room.join('dino-server-'+i); serverName='Server '+i; wirePeers(); cgRoom(want); return;}catch(e){mp=null;}} want=null;}
     if(want){try{mp=await room.join('dino-room-'+want); serverName=want.startsWith('party')?'Party':'Friends'; wirePeers(); cgRoom(want); return;}catch(e){mp=null;}}
     // on the website, servers fill up in order so friends who press Play land together
     const order=[...Array(SERVERS)].map((_,i)=>i+1); if(!web) order.sort(()=>Math.random()-0.5);
     for(let n=0;n<SERVERS;n++){const i=order[n];
       setJoin(`Joining Server ${i}…`,0.68+i*0.04);
       let r; try{r=await room.join('dino-server-'+i);}catch(e){break;}
+      if(CG.room!=='server-'+i) cgRoom('server-'+i);
       await new Promise(res=>setTimeout(res,web?3500:1200));
-      if(r.peers().filter(p=>!p.sameTab&&p.kind==='viewer').length<SERVER_CAP||n===SERVERS-1){mp=r; serverName='Server '+i; CG.room='server-'+i; break;}
+      if(r.peers().filter(p=>!p.sameTab&&p.kind==='viewer').length<SERVER_CAP||n===SERVERS-1){mp=r; serverName='Server '+i; break;}
       try{await r.leave();}catch(e){}
     }
     if(!mp){if(web){setMp('solo'); return;} mp=room; serverName='Lobby';}
-    wirePeers(); if(CG.room) cgRoom(CG.room);
+    wirePeers();
   }catch(e){setMp('solo');}
 }
 function setMp(s){
