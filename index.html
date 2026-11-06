@@ -391,6 +391,11 @@ canvas{display:block;touch-action:none;outline:none;}
 #goals li.done i{background:var(--hp-good);border-color:var(--hp-good);}
 #goals li.next{color:#fff;}
 @media (max-height:560px){#goals{top:calc(50% - 30px);min-width:170px;padding:7px 10px;} #goals li{font-size:11px;gap:6px;}}
+#inviteBtn{position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:8px;padding:9px 16px 9px 12px;border:2px solid rgba(255,201,63,.7);border-radius:999px;background:linear-gradient(180deg,rgba(40,30,18,.94),rgba(18,13,8,.94));color:var(--gold);font:400 16px var(--display);letter-spacing:.05em;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.35);}
+#inviteBtn:hover{background:linear-gradient(180deg,rgba(70,52,24,.96),rgba(30,22,12,.96));}
+#inviteBtn:focus-visible{outline:3px solid var(--gold);outline-offset:2px;}
+#inviteBtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;}
+@media (max-height:560px){#inviteBtn{font-size:13px;padding:7px 12px 7px 9px;bottom:calc(12px + env(safe-area-inset-bottom,0px));} #inviteBtn svg{width:16px;height:16px;}}
 </style>
 
 <div id="app"></div>
@@ -407,6 +412,7 @@ canvas{display:block;touch-action:none;outline:none;}
   <div class="stat"><small>SCORE</small><b id="scoreTxt">0</b></div>
   <div class="stat"><small id="st3">MUNCHED</small><b id="eatTxt">0</b></div>
 </div>
+<button id="inviteBtn" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.3 2.8-5 5.5-5s4.9 1.7 5.5 5"/><path d="M18 8v6M15 11h6"/></svg>Invite friends</button>
 <div id="goals" class="glass" hidden><h4>GOALS</h4><ul id="goalList"></ul></div>
 <div id="destroy" class="glass" hidden><span>DINO DESTRUCTION</span><div class="dbar"><i id="destroyFill"></i></div><b id="destroyPct">0%</b></div>
 <div id="alert" class="glass" hidden><span class="lights"><i></i><i></i></span><span id="alertTxt">POLICE</span><span id="stars"></span></div>
@@ -4597,6 +4603,16 @@ function cgRoom(id){CG.room=id; try{if(CG.sdk) CG.sdk.game.updateRoom({roomId:id
 function cgWantedRoom(){if(!CG.sdk) return null; try{const r=CG.sdk.game.getInviteParam('room'); if(r) return String(r).replace(/[^a-z0-9-]/gi,'').slice(0,24)||null; if(CG.sdk.game.isInstantMultiplayer) return 'party-'+Math.random().toString(36).slice(2,8);}catch(e){} return null;}
 // show your CrazyGames name when you're logged in
 function cgUseName(u){if(!u||!u.username) return; myName=cleanName(u.username); nick.value=myName; $('joinName').textContent=myName; sendPresence(true); renderRoster();}
+async function inviteFriends(){
+  if(!CG.sdk||!CG.room) return;
+  let link=''; try{link=CG.sdk.game.inviteLink({room:CG.room});}catch(e){}
+  if(!link){banner('Invites are not available right now',1800); return;}
+  let copied=false; try{await navigator.clipboard.writeText(link); copied=true;}catch(e){}
+  if(!copied){try{const t=document.createElement('textarea'); t.value=link; t.style.cssText='position:fixed;opacity:0'; document.body.appendChild(t); t.select(); copied=document.execCommand('copy'); t.remove();}catch(e){}}
+  banner(copied?'Invite link copied! Send it to a friend to play together':'Invite link: '+link,3000);
+}
+// the button shows while you're in an online room on CrazyGames
+function updateInvite(){const b=$('inviteBtn'); b.hidden=!(CG.sdk&&CG.room&&mp&&mpState!=='solo'&&state==='play'&&!tutorial);}
 function cgEvent(name){try{if(CG.sdk) CG.sdk.game[name]();}catch(e){}}
 // gameplay counts only while you're actually playing: not on menus, the death screen or a hidden tab
 setInterval(()=>{const p=state==='play'&&P.alive&&!document.hidden; if(p!==CG.playing){CG.playing=p; cgEvent(p?'gameplayStart':'gameplayStop');}},400);
@@ -5120,6 +5136,8 @@ async function joinGame(){
   startGame();
 }
 $('joinBtn').addEventListener('click',joinGame);
+$('inviteBtn').addEventListener('click',ev=>{ev.stopPropagation(); ev.currentTarget.blur(); inviteFriends();});
+$('inviteBtn').addEventListener('pointerdown',ev=>ev.stopPropagation());
 nick.addEventListener('keydown',ev=>{if(ev.key==='Enter') joinGame();});
 function showGameOver(){
   state='dead'; needReset=true;
@@ -5581,7 +5599,7 @@ function updateGoals(){
   if(h!==goalHtml){goalHtml=h; $('goalList').innerHTML=h;}
 }
 function updateDestructionHud(dt){
-  destroyT-=dt; if(destroyT>0) return; destroyT=0.5; updateGoals();
+  destroyT-=dt; if(destroyT>0) return; destroyT=0.5; updateGoals(); updateInvite();
   const p=destructionPct(); $('destroyPct').textContent=(p<10?p.toFixed(1):Math.round(p))+'%'; $('destroyFill').style.width=Math.min(100,p)+'%';
 }
 
